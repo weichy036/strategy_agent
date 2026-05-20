@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>TradeX</title>
+    <link rel="stylesheet" href="/static/styles.css?v=3" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <div class="top-left">
+          <div class="brand">TradeX</div>
+          <nav class="nav-tabs" aria-label="主导航">
+            <button class="nav-pill active">对话 <span>10</span></button>
+            <button class="nav-pill">策略 <span>0</span></button>
+          </nav>
+        </div>
+        <div class="top-actions">
+          <span class="user-name">weichyy</span>
+          <button class="btn btn-ghost">退出登录</button>
+          <button id="clearChatBtn" class="btn btn-primary">新建会话</button>
+        </div>
+      </header>
+
+      <main class="layout">
+        <aside class="sidebar">
+          <div class="sidebar-head">
+            <h2>对话线程</h2>
+            <button id="exampleBtn" class="btn btn-ghost">归档旧会话</button>
+          </div>
+          <div class="thread-group">
+            <div class="group-label">趋势</div>
+            <button class="thread-item active" data-query="对于沪深300ETF，MACD 日线金叉买入、死叉卖出，每年的平均收益是多少？">
+              <span>MACD 金叉死叉</span><em>趋势</em>
+            </button>
+            <button class="thread-item" data-query="帮我验证一个策略：阳光电源按照 MACD（日线）金叉买入、死叉卖出，回测一下效果。">
+              <span>阳光电源 MACD</span><em>趋势</em>
+            </button>
+            <button class="thread-item" data-query="MA10 和 MA60 均线交叉策略在沪深300ETF上效果怎么样？">
+              <span>MA10 / MA60 均线交叉</span><em>趋势</em>
+            </button>
+          </div>
+          <div class="thread-group">
+            <div class="group-label">反转</div>
+            <button class="thread-item" data-query="RSI 超买超卖策略在创业板ETF上表现如何？">
+              <span>RSI 超买超卖</span><em>反转</em>
+            </button>
+          </div>
+          <div class="thread-group">
+            <div class="group-label">ETF</div>
+            <button class="thread-item" data-query="沪深300ETF 回撤反弹策略回测一下。">
+              <span>沪深300ETF 回撤反弹</span><em>ETF</em>
+            </button>
+            <button class="thread-item" data-query="证券ETF 均线择时策略效果怎么样？">
+              <span>证券ETF 均线择时</span><em>ETF</em>
+            </button>
+            <button class="thread-item" data-query="中证500ETF 回撤反弹策略回测。">
+              <span>中证500ETF 回撤反弹</span><em>ETF</em>
+            </button>
+            <button class="thread-item" data-query="红利ETF MACD 策略回测一下。">
+              <span>红利ETF MACD</span><em>ETF</em>
+            </button>
+            <button class="thread-item" data-query="创业板ETF RSI 策略表现如何？">
+              <span>创业板ETF RSI</span><em>ETF</em>
+            </button>
+          </div>
+        </aside>
+
+        <section class="workspace">
+          <div class="workspace-actions">
+            <button class="btn btn-ghost">基于这个策略继续创建</button>
+          </div>
+          <div class="chat-strip">
+            <div id="chatTimeline" class="chat-timeline"></div>
+          </div>
+          <article class="research-doc">
+            <div class="doc-head">
+              <div id="resultBadge" class="badge">未运行</div>
+              <div id="statusLine" class="status-line">状态：待输入</div>
+            </div>
+
+            <div id="clarifyPanel" class="clarify-panel hidden">
+              <div class="section-title">需要补充信息</div>
+              <div id="clarifyQuestion" class="clarify-question"></div>
+              <div id="clarifyMissing" class="clarify-missing"></div>
+            </div>
+
+            <div id="summaryBox" class="summary-box">选择左侧示例，或直接输入一个策略问题开始。</div>
+            <div id="metricGrid" class="metric-grid"></div>
+            <div class="chart-wrap">
+              <svg id="equityChart" viewBox="0 0 760 280" preserveAspectRatio="none"></svg>
+            </div>
+            <div id="riskBox" class="risk-box"></div>
+            <details class="trace-wrap" open>
+              <summary>Agent 执行轨迹</summary>
+              <div id="traceList" class="trace-list"></div>
+            </details>
+            <details class="table-wrap">
+              <summary>年度收益</summary>
+              <table id="yearlyTable" class="table">
+                <thead><tr><th>年份</th><th>收益</th></tr></thead>
+                <tbody></tbody>
+              </table>
+            </details>
+          </article>
+
+          <form class="composer" onsubmit="return false;">
+            <textarea id="queryInput" class="query-input" rows="3" placeholder="例如：帮我验证一个策略，每月买入成交额最大的20只股票，每月调仓一次"></textarea>
+            <button id="runBtn" class="send-btn" aria-label="发送消息" title="发送消息">↑</button>
+          </form>
+        </section>
+      </main>
+    </div>
+    <script type="module" src="/static/app.js?v=3"></script>
+  </body>
+</html>
