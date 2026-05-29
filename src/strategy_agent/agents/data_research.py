@@ -16,7 +16,7 @@ from strategy_agent.services.structured_outputs import parse_agent_output
 
 
 class DataResearchAgent(BaseAgent):
-    """Checks local data readiness before deterministic backtesting."""
+    """在确定性回测前检查本地数据是否就绪。"""
 
     async def _run_async_impl(self, ctx: InvocationContext) -> AsyncGenerator[Event, None]:
         if _skip_data_research(ctx):
@@ -39,7 +39,7 @@ class DataResearchAgent(BaseAgent):
 def create_data_research_agent() -> DataResearchAgent:
     return DataResearchAgent(
         name="DataResearchAgent",
-        description="Inspects local data availability and produces DataAvailabilityReport.",
+        description="检查本地数据可用性，并产出 DataAvailabilityReport。",
     )
 
 

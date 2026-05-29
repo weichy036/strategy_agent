@@ -18,7 +18,7 @@ from strategy_agent.services.structured_outputs import parse_agent_output
 
 
 class StrategyExecutionAgent(BaseAgent):
-    """Deterministic execution stage for a StrategySchema."""
+    """StrategySchema 的确定性执行阶段。"""
 
     async def _run_async_impl(self, ctx: InvocationContext) -> AsyncGenerator[Event, None]:
         if not _should_execute_backtest(ctx):
@@ -36,7 +36,7 @@ class StrategyExecutionAgent(BaseAgent):
 def create_strategy_execution_agent() -> StrategyExecutionAgent:
     return StrategyExecutionAgent(
         name="StrategyExecutionAgent",
-        description="Runs deterministic validation, backtest, metrics, and result assembly.",
+        description="执行确定性的策略校验、回测、指标计算和结果组装。",
     )
 
 

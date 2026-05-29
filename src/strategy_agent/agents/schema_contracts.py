@@ -21,7 +21,7 @@ def output_schema_kwargs(schema: type[BaseModel]) -> dict[str, Any]:
 def json_contract_instruction(schema: type[BaseModel]) -> str:
     schema_json = json.dumps(schema.model_json_schema(), ensure_ascii=False)
     return (
-        "Return a single JSON object that matches this schema. "
-        "Do not wrap it in markdown. "
+        "只返回一个符合下面 schema 的 JSON 对象。"
+        "不要使用 Markdown 代码块，不要输出解释文字。"
         f"JSON schema: {schema_json}"
     )

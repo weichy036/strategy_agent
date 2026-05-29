@@ -13,7 +13,7 @@ from .strategy_designer import create_strategy_designer_agent
 def create_research_orchestrator_agent() -> SequentialAgent:
     return SequentialAgent(
         name="ResearchOrchestratorAgent",
-        description="Sequential quant research workflow orchestrator.",
+        description="按顺序编排量化研究工作流的总控 Agent。",
         sub_agents=[
             create_intent_classifier_agent(),
             create_clarification_agent(),

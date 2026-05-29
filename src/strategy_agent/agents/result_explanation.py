@@ -12,11 +12,11 @@ def create_result_explanation_agent() -> Agent:
     return Agent(
         name="ResultExplanationAgent",
         model=create_llm_model(),
-        description="Explains backtest results in user-friendly language.",
+        description="用用户容易理解的语言解释回测结果。",
         instruction=(
-            "Explain backtest outcomes for retail and research users. "
-            "Always discuss the equity curve, major drawdowns, stability, and limitations. "
-            "Do not provide investment advice. "
+            "请面向普通投资者和研究用户解释回测结果。"
+            "必须说明收益曲线、主要回撤、策略稳定性和结果局限。"
+            "不要给出投资建议，不要暗示未来收益确定。"
             f"{json_contract_instruction(ResultExplanationOutput)}"
         ),
         output_key="result_explanation",
