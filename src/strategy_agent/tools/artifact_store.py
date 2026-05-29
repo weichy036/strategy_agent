@@ -17,7 +17,7 @@ def store_artifact(
             ok=False,
             error=ToolError(code="artifact_store_failed", message="缺少 session_id"),
         )
-    ext = "md" if content_type == "text/markdown" else "json"
+    ext = "md" if content_type == "text/markdown" else "svg" if content_type == "image/svg+xml" else "json"
     name = build_artifact_name(artifact_type, session_id, strategy_id=strategy_id, run_id=run_id, ext=ext)
     uri = f"artifact://{session_id}/{name}"
     try:

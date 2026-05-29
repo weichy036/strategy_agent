@@ -4,17 +4,15 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>TradeX</title>
-    <link rel="stylesheet" href="/static/styles.css?v=3" />
+    <link rel="stylesheet" href="/static/styles.css?v=49" />
   </head>
   <body>
     <div class="app-shell">
       <header class="topbar">
         <div class="top-left">
           <div class="brand">TradeX</div>
-          <nav class="nav-tabs" aria-label="主导航">
-            <button class="nav-pill active">对话 <span>10</span></button>
-            <button class="nav-pill">策略 <span>0</span></button>
-          </nav>
+          <button id="chatTabBtn" class="top-tab active" type="button">Chat</button>
+          <button id="traceTabBtn" class="top-tab" type="button">Trace</button>
         </div>
         <div class="top-actions">
           <span class="user-name">weichyy</span>
@@ -29,55 +27,56 @@
             <h2>对话线程</h2>
             <button id="exampleBtn" class="btn btn-ghost">归档旧会话</button>
           </div>
-          <div class="thread-group">
-            <div class="group-label">趋势</div>
-            <button class="thread-item active" data-query="对于沪深300ETF，MACD 日线金叉买入、死叉卖出，每年的平均收益是多少？">
-              <span>MACD 金叉死叉</span><em>趋势</em>
+          <div class="thread-list">
+            <button class="thread-item active" data-session-id="thread-macd-510300" data-query="对于沪深300ETF，MACD 日线金叉买入、死叉卖出，每年的平均收益是多少？">
+              <span>MACD 金叉死叉</span>
             </button>
-            <button class="thread-item" data-query="帮我验证一个策略：阳光电源按照 MACD（日线）金叉买入、死叉卖出，回测一下效果。">
-              <span>阳光电源 MACD</span><em>趋势</em>
+            <button class="thread-item" data-session-id="thread-macd-300750" data-query="帮我验证一个策略：阳光电源按照 MACD（日线）金叉买入、死叉卖出，回测一下效果。">
+              <span>阳光电源 MACD</span>
             </button>
-            <button class="thread-item" data-query="MA10 和 MA60 均线交叉策略在沪深300ETF上效果怎么样？">
-              <span>MA10 / MA60 均线交叉</span><em>趋势</em>
+            <button class="thread-item" data-session-id="thread-ma-510300" data-query="MA10 和 MA60 均线交叉策略在沪深300ETF上效果怎么样？">
+              <span>MA10 / MA60 均线交叉</span>
             </button>
-          </div>
-          <div class="thread-group">
-            <div class="group-label">反转</div>
-            <button class="thread-item" data-query="RSI 超买超卖策略在创业板ETF上表现如何？">
-              <span>RSI 超买超卖</span><em>反转</em>
+            <button class="thread-item" data-session-id="thread-rsi-chuangye" data-query="RSI 超买超卖策略在创业板ETF上表现如何？">
+              <span>RSI 超买超卖</span>
             </button>
-          </div>
-          <div class="thread-group">
-            <div class="group-label">ETF</div>
-            <button class="thread-item" data-query="沪深300ETF 回撤反弹策略回测一下。">
-              <span>沪深300ETF 回撤反弹</span><em>ETF</em>
+            <button class="thread-item" data-session-id="thread-drawdown-510300" data-query="沪深300ETF 回撤反弹策略回测一下。">
+              <span>沪深300ETF 回撤反弹</span>
             </button>
-            <button class="thread-item" data-query="证券ETF 均线择时策略效果怎么样？">
-              <span>证券ETF 均线择时</span><em>ETF</em>
+            <button class="thread-item" data-session-id="thread-ma-securities" data-query="证券ETF 均线择时策略效果怎么样？">
+              <span>证券ETF 均线择时</span>
             </button>
-            <button class="thread-item" data-query="中证500ETF 回撤反弹策略回测。">
-              <span>中证500ETF 回撤反弹</span><em>ETF</em>
+            <button class="thread-item" data-session-id="thread-drawdown-500" data-query="中证500ETF 回撤反弹策略回测。">
+              <span>中证500ETF 回撤反弹</span>
             </button>
-            <button class="thread-item" data-query="红利ETF MACD 策略回测一下。">
-              <span>红利ETF MACD</span><em>ETF</em>
+            <button class="thread-item" data-session-id="thread-macd-dividend" data-query="红利ETF MACD 策略回测一下。">
+              <span>红利ETF MACD</span>
             </button>
-            <button class="thread-item" data-query="创业板ETF RSI 策略表现如何？">
-              <span>创业板ETF RSI</span><em>ETF</em>
+            <button class="thread-item" data-session-id="thread-rsi-cyb-etf" data-query="创业板ETF RSI 策略表现如何？">
+              <span>创业板ETF RSI</span>
             </button>
           </div>
         </aside>
 
         <section class="workspace">
-          <div class="workspace-actions">
-            <button class="btn btn-ghost">基于这个策略继续创建</button>
-          </div>
-          <div class="chat-strip">
+          <div id="chatStrip" class="chat-strip hidden">
             <div id="chatTimeline" class="chat-timeline"></div>
+          </div>
+          <div id="traceBoard" class="trace-board hidden">
+            <div class="trace-board-head">
+              <div>
+                <div class="trace-eyebrow">Agent Observability</div>
+                <h2>执行轨迹</h2>
+              </div>
+              <div id="traceTokenSummary" class="trace-token-summary">tokens 0</div>
+            </div>
+            <div id="traceStats" class="trace-stats"></div>
+            <div id="traceTurns" class="trace-turns"></div>
           </div>
           <article class="research-doc">
             <div class="doc-head">
               <div id="resultBadge" class="badge">未运行</div>
-              <div id="statusLine" class="status-line">状态：待输入</div>
+              <div id="statusLine" class="status-line">等待输入</div>
             </div>
 
             <div id="clarifyPanel" class="clarify-panel hidden">
@@ -86,17 +85,14 @@
               <div id="clarifyMissing" class="clarify-missing"></div>
             </div>
 
-            <div id="summaryBox" class="summary-box">选择左侧示例，或直接输入一个策略问题开始。</div>
+            <div id="summaryBox" class="summary-box"></div>
+            <div id="insightGrid" class="insight-grid"></div>
             <div id="metricGrid" class="metric-grid"></div>
-            <div class="chart-wrap">
+            <div id="chartWrap" class="chart-wrap hidden">
               <svg id="equityChart" viewBox="0 0 760 280" preserveAspectRatio="none"></svg>
             </div>
             <div id="riskBox" class="risk-box"></div>
-            <details class="trace-wrap" open>
-              <summary>Agent 执行轨迹</summary>
-              <div id="traceList" class="trace-list"></div>
-            </details>
-            <details class="table-wrap">
+            <details id="yearlyWrap" class="table-wrap hidden">
               <summary>年度收益</summary>
               <table id="yearlyTable" class="table">
                 <thead><tr><th>年份</th><th>收益</th></tr></thead>
@@ -112,6 +108,6 @@
         </section>
       </main>
     </div>
-    <script type="module" src="/static/app.js?v=3"></script>
+    <script type="module" src="/static/app.js?v=49"></script>
   </body>
 </html>

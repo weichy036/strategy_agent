@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 class Universe(BaseModel):
@@ -19,11 +19,16 @@ class Period(BaseModel):
 
 
 class SignalRule(BaseModel):
-    kind: str
+    kind: Literal["indicator_event", "comparison_rule"]
     indicator: str | None = None
     params: dict[str, Any] = Field(default_factory=dict)
     operator: str | None = None
     value: Any | None = None
+
+    @field_validator("indicator", "operator")
+    @classmethod
+    def normalize_lowercase(cls, value: str | None) -> str | None:
+        return value.lower() if isinstance(value, str) else value
 
 
 class Signals(BaseModel):
@@ -35,6 +40,29 @@ class RankingConfig(BaseModel):
     sort_by: str
     order: Literal["asc", "desc"] = "desc"
     top_n: int
+    lookback: Literal["point_in_time", "previous_month_sum", "previous_month_return"] = "point_in_time"
+
+    @field_validator("sort_by")
+    @classmethod
+    def normalize_sort_field(cls, value: str) -> str:
+        aliases = {
+            "总市值": "total_mv",
+            "市值": "total_mv",
+            "总市值最大": "total_mv",
+            "流通市值": "circ_mv",
+            "成交额": "amount",
+            "成交金额": "amount",
+            "换手率": "turnover_rate",
+            "涨幅": "monthly_return",
+            "收益率": "monthly_return",
+            "月涨幅": "monthly_return",
+            "上月涨幅": "monthly_return",
+            "上个月涨幅": "monthly_return",
+            "last_month_return": "monthly_return",
+            "previous_month_return": "monthly_return",
+            "monthly_return": "monthly_return",
+        }
+        return aliases.get(value, value)
 
 
 class HoldPeriod(BaseModel):
@@ -57,9 +85,14 @@ class Selection(BaseModel):
 
 class Portfolio(BaseModel):
     position_count: int | None = None
-    weight_method: str | None = None
+    weight_method: str | None = "equal"
     rebalance_frequency: str | None = None
     long_only: bool = True
+
+    @field_validator("weight_method", mode="before")
+    @classmethod
+    def default_weight_method(cls, value: str | None) -> str:
+        return value or "equal"
 
 
 class Execution(BaseModel):
@@ -89,7 +122,7 @@ class StrategySchema(BaseModel):
     strategy_id: str | None = None
     name: str | None = None
     market: Literal["CN"] = "CN"
-    strategy_type: str
+    strategy_type: Literal["signal_trading", "rule_based_timing", "cross_sectional_rotation"]
     universe: Universe
     period: Period
     signals: Signals | None = None

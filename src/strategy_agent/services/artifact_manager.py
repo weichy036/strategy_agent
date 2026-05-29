@@ -31,9 +31,13 @@ def persist_artifact_content(
     artifact_dir.mkdir(parents=True, exist_ok=True)
     target = artifact_dir / name
 
-    if content_type == "text/markdown":
+    if content_type.startswith("text/") or content_type == "image/svg+xml":
         target.write_text(str(content), encoding="utf-8")
     else:
         payload = content if isinstance(content, (dict, list)) else {"value": str(content)}
         target.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
     return target
+
+
+def artifact_url(session_id: str, name: str) -> str:
+    return f"/artifacts/{session_id}/{name}"

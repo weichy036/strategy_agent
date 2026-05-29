@@ -6,6 +6,7 @@ from strategy_agent.data_access import (
     load_bar_frame,
     load_benchmark_frame,
     load_daily_basic_frame,
+    load_selection_daily_frame,
     resolve_latest_trade_date,
 )
 from .instruments import resolve_instrument
@@ -29,6 +30,10 @@ def get_benchmark_frame(symbol: str = "000300.SH", start_date: str | None = None
 
 def get_daily_basic_frame(trade_date: str = "latest") -> pd.DataFrame:
     return load_daily_basic_frame(trade_date)
+
+
+def get_selection_daily_frame(trade_date: str = "latest") -> pd.DataFrame:
+    return load_selection_daily_frame(trade_date)
 
 
 def get_daily_basic_by_instrument(instrument: str, trade_date: str = "latest") -> pd.DataFrame:

@@ -6,16 +6,16 @@ from .market_data import (
     get_daily_basic_by_instrument,
     get_daily_basic_frame,
     get_latest_trade_date,
+    get_selection_daily_frame,
 )
-from .strategy_parser import parse_strategy_query
 
 __all__ = [
     "resolve_instrument",
     "run_backtest_for_strategy",
-    "parse_strategy_query",
     "get_bar_frame",
     "get_benchmark_frame",
     "get_daily_basic_by_instrument",
     "get_daily_basic_frame",
     "get_latest_trade_date",
+    "get_selection_daily_frame",
 ]

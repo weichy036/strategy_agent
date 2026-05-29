@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from google.adk import Agent
 
-from strategy_agent.config import settings
 from strategy_agent.schemas.agent_outputs import ResultExplanationOutput
+from .llm_model import create_llm_model
 from .schema_contracts import json_contract_instruction
 from .schema_contracts import output_schema_kwargs
 
@@ -11,7 +11,7 @@ from .schema_contracts import output_schema_kwargs
 def create_result_explanation_agent() -> Agent:
     return Agent(
         name="ResultExplanationAgent",
-        model=settings.adk_model,
+        model=create_llm_model(),
         description="Explains backtest results in user-friendly language.",
         instruction=(
             "Explain backtest outcomes for retail and research users. "

@@ -5,9 +5,10 @@ from typing import Any
 
 from google.adk.tools import BaseTool, ToolContext
 
+from strategy_agent.services.state_keys import AgentStateKeys
 
-TRACE_STATE_KEY = "temp:tool_trace_buffer"
-ACTIVE_SUBTASK_KEY = "temp:active_subtask"
+TRACE_STATE_KEY = AgentStateKeys.TOOL_TRACE_BUFFER
+ACTIVE_SUBTASK_KEY = AgentStateKeys.ACTIVE_SUBTASK
 
 
 def _timestamp() -> str:

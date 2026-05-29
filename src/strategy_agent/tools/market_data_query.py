@@ -6,6 +6,7 @@ from strategy_agent.domain.market_data import (
     get_daily_basic_by_instrument,
     get_daily_basic_frame,
     get_latest_trade_date,
+    get_selection_daily_frame,
 )
 from strategy_agent.schemas.tool_contracts import ToolError, ToolResponse
 
@@ -28,6 +29,8 @@ def query_market_data(
         frame = get_benchmark_frame(instrument or "000300.SH", start_date=start_date, end_date=end_date)
     elif query_type == "daily_basic_frame":
         frame = get_daily_basic_frame(trade_date)
+    elif query_type == "selection_daily_frame":
+        frame = get_selection_daily_frame(trade_date)
     elif query_type == "daily_basic_by_instrument" and instrument:
         frame = get_daily_basic_by_instrument(instrument, trade_date=trade_date)
     else:

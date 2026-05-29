@@ -23,6 +23,8 @@ class Settings:
     default_bar_frequency: str = "1d"
     default_start_date: str = "2018-01-01"
     adk_model: str = os.getenv("ADK_MODEL", "deepseek/deepseek-chat")
+    llm_timeout_seconds: int = int(os.getenv("LLM_TIMEOUT_SECONDS", "30"))
+    agent_idle_timeout_seconds: int = int(os.getenv("AGENT_IDLE_TIMEOUT_SECONDS", "75"))
     data_root: Path = DATA_ROOT
     docs_root: Path = DOCS_ROOT
     raw_root: Path = DATA_ROOT / "raw"
@@ -44,6 +46,14 @@ class Settings:
     @property
     def daily_qfq_dir(self) -> Path:
         return self.derived_root / "daily_qfq"
+
+    @property
+    def selection_daily_dir(self) -> Path:
+        return self.derived_root / "selection_daily"
+
+    @property
+    def selection_monthly_dir(self) -> Path:
+        return self.derived_root / "selection_monthly"
 
 
 settings = Settings()
