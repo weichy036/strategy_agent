@@ -5,6 +5,7 @@ from typing import Any
 
 from strategy_agent.services.observability import build_observability
 from strategy_agent.services.runtime_models import AdkStreamEvent, AgentTurnResult
+from strategy_agent.services.state_keys import AgentStateKeys
 from strategy_agent.services.structured_outputs import AGENT_OUTPUT_SCHEMAS, parse_agent_output
 AGENT_OUTPUT_DATA_KEYS = {
     "IntentClassifierAgent": "intent",
@@ -50,6 +51,7 @@ class StrategyRunResultCollector:
             "tool_call": self._record_tool_call,
             "tool_result": self._record_tool_result,
             "message": self._record_message,
+            "state_delta": self._record_state_delta,
             "state_trace": self._record_state_trace,
             "usage": self._record_usage,
             "error": self._record_error,
@@ -178,6 +180,32 @@ class StrategyRunResultCollector:
                 "timestamp": item.get("timestamp"),
             }
         )
+
+    def _record_state_delta(self, event: AdkStreamEvent) -> None:
+        state = event.payload
+        if not isinstance(state, dict):
+            return
+
+        mapping = {
+            AgentStateKeys.INTENT_CLASSIFICATION: ("intent", "IntentClassifierAgent"),
+            AgentStateKeys.CLARIFICATION_RESULT: ("clarification", "ClarificationAgent"),
+            AgentStateKeys.STRATEGY_SCHEMA_DRAFT: ("strategy_schema", "StrategyDesignerAgent"),
+            AgentStateKeys.DATA_AVAILABILITY: ("data_availability", "DataResearchAgent"),
+            AgentStateKeys.BACKTEST_RESULT: ("backtest", ""),
+            AgentStateKeys.METRICS_RESULT: ("metrics", ""),
+            AgentStateKeys.RESULT_PAGE: ("result_page", ""),
+            AgentStateKeys.RESULT_EXPLANATION: ("explanations", "ResultExplanationAgent"),
+        }
+        for state_key, (result_key, agent_name) in mapping.items():
+            value = state.get(state_key)
+            if isinstance(value, dict):
+                self.result_data[result_key] = value
+            elif isinstance(value, str) and agent_name:
+                parsed = parse_agent_output(agent_name, value)
+                if parsed and parsed.ok and isinstance(parsed.data, dict):
+                    self.result_data[result_key] = parsed.data
+        if state.get("workflow.status") == "completed":
+            self.status = "completed"
 
     def _store_parsed_agent_output(self, *, name: str, payload: Any) -> bool:
         parsed = parse_agent_output(name, payload)

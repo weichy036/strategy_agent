@@ -1307,6 +1307,14 @@ textarea {
   background: transparent;
 }
 
+.main-chart-image {
+  width: 100%;
+  height: clamp(190px, 27vh, 300px);
+  min-height: 190px;
+  object-fit: fill;
+  display: block;
+}
+
 .risk-box {
   color: var(--muted);
   font-size: var(--font-sm);

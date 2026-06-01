@@ -6,6 +6,9 @@ class AgentStateKeys:
     SESSION_ID = "session_id"
     RUN_ID = "run_id"
 
+    INTENT_CLASSIFICATION = "intent_classification"
+    CLARIFICATION_RESULT = "clarification_result"
+    RESULT_EXPLANATION = "result_explanation"
     STRATEGY_SCHEMA = "strategy.schema"
     STRATEGY_SCHEMA_DRAFT = "strategy_schema_draft"
     EXECUTABLE_STRATEGY_SCHEMA = "data.executable_strategy_schema"

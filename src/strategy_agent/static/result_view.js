@@ -125,7 +125,7 @@ function renderCompleted(data) {
   setStatus("回测完成");
   renderInsights(renderCompletedInsights(data));
   renderMetrics(data?.metrics || null);
-  renderChart(data?.result_page?.equity_curve?.series || []);
+  renderChart(data?.result_page?.equity_curve || []);
   renderYearly(data?.metrics?.period_breakdown?.yearly_returns || []);
   renderRisks(data, summary);
   updateLastAgentTurn(`${strategyName} 回测完成。`, "completed");

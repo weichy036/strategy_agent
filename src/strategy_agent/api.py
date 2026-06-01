@@ -15,6 +15,7 @@ from pydantic import BaseModel, Field
 from strategy_agent.config import settings
 from strategy_agent.services.adk_event_adapter import adapt_adk_event, extract_text_from_content
 from strategy_agent.services.agent_runtime import get_agent_runtime
+from strategy_agent.services.response_slimmer import slim_turn_result
 from strategy_agent.services.result_collector import StrategyRunResultCollector
 
 
@@ -153,7 +154,7 @@ def _assistant_turn(events: list[Any]) -> SessionTurn | None:
     for event in events:
         for adapted_event in adapt_adk_event(event):
             collector.record(adapted_event)
-    result = collector.build()
+    result = slim_turn_result(collector.build())
     message = _display_assistant_message(result)
     if not message:
         return None

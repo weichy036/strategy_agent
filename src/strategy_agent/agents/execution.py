@@ -10,11 +10,11 @@ from google.adk.events.event_actions import EventActions
 from google.genai import types
 
 from strategy_agent.schemas.tool_contracts import ToolResponse
-from strategy_agent.services.adk_event_adapter import extract_text_from_content
+from strategy_agent.services.agent_state import read_structured_state
 from strategy_agent.services.execution_gate import should_execute_backtest
 from strategy_agent.services.execution_flow import strategy_execution_steps
 from strategy_agent.services.live_trace import emit_live_timeline_item
-from strategy_agent.services.structured_outputs import parse_agent_output
+from strategy_agent.services.state_keys import AgentStateKeys
 
 
 class StrategyExecutionAgent(BaseAgent):
@@ -24,7 +24,7 @@ class StrategyExecutionAgent(BaseAgent):
         if not _should_execute_backtest(ctx):
             return
 
-        schema = _state_dict(ctx, "data.executable_strategy_schema") or _state_dict(ctx, "strategy_schema_draft")
+        schema = _state_dict(ctx, AgentStateKeys.EXECUTABLE_STRATEGY_SCHEMA) or _state_dict(ctx, AgentStateKeys.STRATEGY_SCHEMA_DRAFT)
         if not schema:
             return
 
@@ -41,33 +41,21 @@ def create_strategy_execution_agent() -> StrategyExecutionAgent:
 
 
 def _state_dict(ctx: InvocationContext, key: str) -> dict[str, Any] | None:
-    value = ctx.session.state.get(key)
-    if hasattr(value, "model_dump"):
-        value = value.model_dump()
-    if isinstance(value, dict):
-        return value
-    return _latest_strategy_schema(ctx)
-
-
-def _latest_strategy_schema(ctx: InvocationContext) -> dict[str, Any] | None:
-    return _latest_agent_data(ctx, "StrategyDesignerAgent")
+    agent_name_by_key = {
+        AgentStateKeys.INTENT_CLASSIFICATION: "IntentClassifierAgent",
+        AgentStateKeys.CLARIFICATION_RESULT: "ClarificationAgent",
+        AgentStateKeys.STRATEGY_SCHEMA_DRAFT: "StrategyDesignerAgent",
+        AgentStateKeys.EXECUTABLE_STRATEGY_SCHEMA: "DataResearchAgent",
+        AgentStateKeys.DATA_AVAILABILITY: "DataResearchAgent",
+    }
+    return read_structured_state(ctx.session.state, key, agent_name_by_key.get(key, ""))
 
 
 def _should_execute_backtest(ctx: InvocationContext) -> bool:
-    intent = _latest_agent_data(ctx, "IntentClassifierAgent")
-    clarification = _latest_agent_data(ctx, "ClarificationAgent")
-    data_availability = _latest_agent_data(ctx, "DataResearchAgent")
+    intent = _state_dict(ctx, AgentStateKeys.INTENT_CLASSIFICATION)
+    clarification = _state_dict(ctx, AgentStateKeys.CLARIFICATION_RESULT)
+    data_availability = _state_dict(ctx, AgentStateKeys.DATA_AVAILABILITY)
     return should_execute_backtest(intent, clarification, data_availability)
-
-
-def _latest_agent_data(ctx: InvocationContext, agent_name: str) -> dict[str, Any] | None:
-    for event in reversed(ctx._get_events(current_invocation=True)):  # noqa: SLF001 - ADK exposes no public current-event iterator.
-        if event.author != agent_name:
-            continue
-        parsed = parse_agent_output(agent_name, extract_text_from_content(event.content))
-        if parsed and parsed.ok and isinstance(parsed.data, dict):
-            return parsed.data
-    return None
 
 
 def _tool_call_event(ctx: InvocationContext, author: str, name: str, args: dict[str, Any]) -> Event:
@@ -117,11 +105,11 @@ def _state_delta(name: str, payload: dict[str, Any]) -> dict[str, Any]:
     if name == "validate_strategy_schema":
         return {"strategy.validation": payload.get("data")}
     if name == "run_backtest" and payload.get("ok"):
-        return {"backtest.result": payload.get("data")}
+        return {AgentStateKeys.BACKTEST_RESULT: payload.get("data")}
     if name == "compute_metrics" and payload.get("ok"):
-        return {"metrics.result": payload.get("data")}
+        return {AgentStateKeys.METRICS_RESULT: payload.get("data")}
     if name == "assemble_result_page" and payload.get("ok"):
-        return {"report.result_page": (payload.get("data") or {}).get("result_page"), "workflow.status": "completed"}
+        return {AgentStateKeys.RESULT_PAGE: (payload.get("data") or {}).get("result_page"), "workflow.status": "completed"}
     return {}
 
 

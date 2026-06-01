@@ -30,6 +30,7 @@ class Settings:
     raw_root: Path = DATA_ROOT / "raw"
     derived_root: Path = DATA_ROOT / "derived"
     artifact_root: Path = DATA_ROOT / "artifacts"
+    adk_artifact_root: Path = DATA_ROOT / "adk_artifacts"
 
     @property
     def fund_daily_dir(self) -> Path:

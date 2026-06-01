@@ -10,9 +10,9 @@ from google.adk.events import Event
 from google.adk.events.event_actions import EventActions
 from google.genai import types
 
-from strategy_agent.services.adk_event_adapter import extract_text_from_content
+from strategy_agent.services.agent_state import read_structured_state
 from strategy_agent.services.data_availability import inspect_strategy_data
-from strategy_agent.services.structured_outputs import parse_agent_output
+from strategy_agent.services.state_keys import AgentStateKeys
 
 
 class DataResearchAgent(BaseAgent):
@@ -23,7 +23,7 @@ class DataResearchAgent(BaseAgent):
             report = _not_required_report("当前请求不需要执行回测数据检查。")
             executable_schema = None
         else:
-            schema = _state_dict(ctx, "strategy_schema_draft") or _latest_agent_data(ctx, "StrategyDesignerAgent")
+            schema = _state_dict(ctx, AgentStateKeys.STRATEGY_SCHEMA_DRAFT)
             report = inspect_strategy_data(schema) if schema else _not_required_report("未产出可执行策略结构，跳过数据检查。")
             executable_schema = apply_schema_patch(schema, report.schema_patch) if schema else None
 
@@ -44,10 +44,10 @@ def create_data_research_agent() -> DataResearchAgent:
 
 
 def _skip_data_research(ctx: InvocationContext) -> bool:
-    intent = _latest_agent_data(ctx, "IntentClassifierAgent")
+    intent = _state_dict(ctx, AgentStateKeys.INTENT_CLASSIFICATION)
     if intent and intent.get("is_backtest_request") is False:
         return True
-    clarification = _latest_agent_data(ctx, "ClarificationAgent")
+    clarification = _state_dict(ctx, AgentStateKeys.CLARIFICATION_RESULT)
     return bool(clarification and clarification.get("needs_clarification"))
 
 
@@ -63,9 +63,9 @@ def _state_delta(report: dict[str, Any], executable_schema: dict[str, Any] | Non
         "workflow.data_ready": bool(report.get("can_continue_backtest", report.get("is_ready"))),
     }
     if executable_schema:
-        delta["strategy_schema_draft"] = executable_schema
-        delta["strategy.schema"] = executable_schema
-        delta["data.executable_strategy_schema"] = executable_schema
+        delta[AgentStateKeys.STRATEGY_SCHEMA_DRAFT] = executable_schema
+        delta[AgentStateKeys.STRATEGY_SCHEMA] = executable_schema
+        delta[AgentStateKeys.EXECUTABLE_STRATEGY_SCHEMA] = executable_schema
     return delta
 
 
@@ -90,20 +90,13 @@ def _set_path(target: dict[str, Any], parts: list[str], value: Any) -> None:
 
 
 def _state_dict(ctx: InvocationContext, key: str) -> dict[str, Any] | None:
-    value = ctx.session.state.get(key)
-    if hasattr(value, "model_dump"):
-        value = value.model_dump()
-    return value if isinstance(value, dict) else None
-
-
-def _latest_agent_data(ctx: InvocationContext, agent_name: str) -> dict[str, Any] | None:
-    for event in reversed(ctx._get_events(current_invocation=True)):  # noqa: SLF001 - ADK exposes no public current-event iterator.
-        if event.author != agent_name:
-            continue
-        parsed = parse_agent_output(agent_name, extract_text_from_content(event.content))
-        if parsed and parsed.ok and isinstance(parsed.data, dict):
-            return parsed.data
-    return None
+    agent_name_by_key = {
+        AgentStateKeys.INTENT_CLASSIFICATION: "IntentClassifierAgent",
+        AgentStateKeys.CLARIFICATION_RESULT: "ClarificationAgent",
+        AgentStateKeys.STRATEGY_SCHEMA_DRAFT: "StrategyDesignerAgent",
+        AgentStateKeys.DATA_AVAILABILITY: "DataResearchAgent",
+    }
+    return read_structured_state(ctx.session.state, key, agent_name_by_key.get(key, ""))
 
 
 __all__ = ["DataResearchAgent", "apply_schema_patch", "create_data_research_agent"]

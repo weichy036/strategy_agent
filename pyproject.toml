@@ -7,9 +7,11 @@ authors = [
 ]
 requires-python = ">=3.13"
 dependencies = [
-    "google-adk>=1.31.1",
+    "google-adk==2.0.0",
+    "google-cloud-storage>=3.0.0",
     "litellm>=1.83.12",
     "pandas>=3.0.2",
+    "pyarrow>=24.0.0",
     "tushare>=1.4.29",
 ]
 
@@ -20,3 +22,8 @@ strategy-agent-api = "strategy_agent.api:main"
 [build-system]
 requires = ["uv_build>=0.11.6,<0.12.0"]
 build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.0.3",
+]

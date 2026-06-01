@@ -56,6 +56,9 @@ def adapt_adk_event(event: Any) -> list[AdkStreamEvent]:
         adapted.append(AdkStreamEvent(type="message", author=author, payload={"text": text}))
 
     state_delta = getattr(getattr(event, "actions", None), "state_delta", None) or {}
+    if state_delta:
+        adapted.append(AdkStreamEvent(type="state_delta", author=author, payload=_plain_payload(state_delta)))
+
     trace_buffer = state_delta.get(AgentStateKeys.TOOL_TRACE_BUFFER)
     if isinstance(trace_buffer, list):
         for item in trace_buffer:

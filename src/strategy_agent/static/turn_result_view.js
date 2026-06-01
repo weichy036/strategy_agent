@@ -190,7 +190,7 @@ function equityChart(equityCurve) {
     image.alt = "收益曲线";
     image.loading = "lazy";
     image.onerror = () => image.replaceWith(equityChartSvg(equityCurve.series || []));
-    root.append(image, dateLabels(equityCurve.series || []));
+    root.append(image, dateLabels(equityCurve.series || [], equityCurve.meta || {}));
     return root;
   }
   return equityChartSvg(equityCurve?.series || []);
@@ -229,8 +229,13 @@ function chartPoints(series, width, height, pad) {
   }).join(" ");
 }
 
-function dateLabels(series) {
+function dateLabels(series, meta = {}) {
   const root = div("chart-date-labels");
+  if (meta.start_date || meta.end_date) {
+    root.append(textBlock(formatDate(meta.start_date), "chart-date-label"));
+    root.append(textBlock(formatDate(meta.end_date), "chart-date-label"));
+    return root;
+  }
   if (!Array.isArray(series) || series.length < 2) return root;
   root.append(textBlock(formatDate(series[0]?.trade_date), "chart-date-label"));
   root.append(textBlock(formatDate(series[series.length - 1]?.trade_date), "chart-date-label"));

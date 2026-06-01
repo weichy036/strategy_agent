@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 from google.adk import Runner
-from google.adk.artifacts import InMemoryArtifactService
+from google.adk.apps import App
+from google.adk.artifacts import FileArtifactService
 from google.adk.memory import InMemoryMemoryService
 from google.adk.sessions import InMemorySessionService
 
@@ -11,11 +12,11 @@ from strategy_agent.config import settings
 
 def build_runner() -> Runner:
     root_agent = create_research_orchestrator_agent()
+    app = App(name=settings.project_name, root_agent=root_agent)
     return Runner(
-        app_name=settings.project_name,
-        agent=root_agent,
+        app=app,
         session_service=InMemorySessionService(),
-        artifact_service=InMemoryArtifactService(),
+        artifact_service=FileArtifactService(settings.adk_artifact_root),
         memory_service=InMemoryMemoryService(),
         auto_create_session=True,
     )

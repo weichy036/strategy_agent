@@ -14,6 +14,7 @@ from strategy_agent.app import build_runner
 from strategy_agent.config import settings
 from strategy_agent.services.adk_event_adapter import adapt_adk_event
 from strategy_agent.services.live_trace import reset_live_trace_queue, set_live_trace_queue
+from strategy_agent.services.response_slimmer import slim_turn_result
 from strategy_agent.services.result_collector import StrategyRunResultCollector
 from strategy_agent.services.runtime_models import AgentTurnResult
 
@@ -125,7 +126,7 @@ class AgentResearchRuntime:
                 raise RuntimeError(
                     "No agent events received. Please check model connectivity and provider configuration."
                 )
-            queue.put_nowait({"type": "final", "result": asdict(collector.build())})
+            queue.put_nowait({"type": "final", "result": asdict(slim_turn_result(collector.build()))})
         except Exception as exc:  # noqa: BLE001
             queue.put_nowait(
                 {
@@ -153,7 +154,7 @@ class AgentResearchRuntime:
         for event in events:
             for adapted_event in adapt_adk_event(event):
                 collector.record(adapted_event)
-        return collector.build()
+        return slim_turn_result(collector.build())
 
 
 _runtime: AgentResearchRuntime | None = None

@@ -3,6 +3,7 @@ from __future__ import annotations
 from google.adk import Agent
 
 from strategy_agent.schemas.strategy_schema import StrategySchema
+from strategy_agent.services.adk_skills import create_quant_backtest_skill_toolset
 from .llm_model import create_llm_model
 from .schema_contracts import json_contract_instruction
 from .schema_contracts import output_schema_kwargs
@@ -33,5 +34,6 @@ def create_strategy_designer_agent() -> Agent:
             f"{json_contract_instruction(StrategySchema)}"
         ),
         output_key="strategy_schema_draft",
+        tools=[create_quant_backtest_skill_toolset()],
         **output_schema_kwargs(StrategySchema),
     )

@@ -32,6 +32,16 @@ export function renderYearly(yearlyReturns) {
 }
 
 export function renderChart(series) {
+  const artifactUrl = series?.artifact?.url;
+  const meta = series?.meta || {};
+  if (artifactUrl) {
+    renderArtifactChart(artifactUrl, meta);
+    return;
+  }
+
+  els.chartWrap?.querySelector(".main-chart-image")?.remove();
+  els.chartWrap?.querySelector(".chart-date-labels")?.remove();
+  els.equityChart.classList.remove("hidden");
   els.equityChart.innerHTML = "";
   if (!Array.isArray(series) || series.length < 2) {
     els.chartWrap?.classList.add("hidden");
@@ -47,6 +57,30 @@ export function renderChart(series) {
   appendSvgPath(`M ${pad},${height - pad} L ${points} L ${endX},${height - pad} Z`, "rgba(17,17,17,0.07)");
   appendSvgLine(points);
   appendDateLabels(series, width, height, pad);
+}
+
+function renderArtifactChart(url, meta) {
+  els.equityChart.innerHTML = "";
+  els.equityChart.classList.add("hidden");
+  els.chartWrap?.classList.remove("hidden");
+  els.chartWrap?.querySelector(".main-chart-image")?.remove();
+  els.chartWrap?.querySelector(".chart-date-labels")?.remove();
+
+  const image = document.createElement("img");
+  image.className = "main-chart-image";
+  image.src = url;
+  image.alt = "收益曲线";
+  image.loading = "lazy";
+  image.onerror = () => {
+    image.remove();
+    els.equityChart.classList.remove("hidden");
+  };
+  els.chartWrap?.appendChild(image);
+
+  const labels = document.createElement("div");
+  labels.className = "chart-date-labels";
+  labels.innerHTML = `<span>${formatDate(meta.start_date)}</span><span>${formatDate(meta.end_date)}</span>`;
+  els.chartWrap?.appendChild(labels);
 }
 
 function chartPoints(series, width, height, pad) {
