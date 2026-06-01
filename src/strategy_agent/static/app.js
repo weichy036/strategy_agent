@@ -1,5 +1,5 @@
-import { createLocalSession, loadSessionHistory, setActiveSession } from "./api.js?v=49";
-import { runResearchFallback, streamResearchRequest } from "./api.js?v=49";
+import { createLocalSession, loadSessionHistory, setActiveSession } from "./api.js?v=52";
+import { runResearchFallback, streamResearchRequest } from "./api.js?v=52";
 import {
   DEFAULT_QUERY,
   addLiveTraceItems,
@@ -17,8 +17,8 @@ import {
   setStatus,
   startTraceLoading,
   stopTraceLoading,
-} from "./render.js?v=49";
-import { showTraceBoard } from "./trace_dashboard.js?v=49";
+} from "./render.js?v=52";
+import { showTraceBoard } from "./trace_dashboard.js?v=52";
 
 let runTimer = null;
 

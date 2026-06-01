@@ -14,9 +14,10 @@ from strategy_agent.app import build_runner
 from strategy_agent.config import settings
 from strategy_agent.services.adk_event_adapter import adapt_adk_event
 from strategy_agent.services.live_trace import reset_live_trace_queue, set_live_trace_queue
+from strategy_agent.services.progress_narrator import ProgressNarratorAgent, should_narrate
 from strategy_agent.services.response_slimmer import slim_turn_result
-from strategy_agent.services.result_collector import StrategyRunResultCollector
-from strategy_agent.services.runtime_models import AgentTurnResult
+from strategy_agent.services.result_collector import StrategyRunResultCollector, timeline_entry
+from strategy_agent.services.runtime_models import AdkStreamEvent, AgentTurnResult
 
 
 def _to_user_content(message: str) -> types.Content:
@@ -26,6 +27,7 @@ def _to_user_content(message: str) -> types.Content:
 class AgentResearchRuntime:
     def __init__(self) -> None:
         self.runner = build_runner()
+        self.narrator = ProgressNarratorAgent()
         self._runner_lock = Lock()
 
     async def _collect_events_async(self, *, user_id: str, session_id: str, message: str):
@@ -120,7 +122,7 @@ class AgentResearchRuntime:
                     new_message=_to_user_content(message),
                 ):
                     saw_event = True
-                    if _push_adk_event(event, collector, queue):
+                    if _push_adk_event(event, collector, queue, narrator=self.narrator):
                         break
             if not saw_event:
                 raise RuntimeError(
@@ -153,7 +155,12 @@ class AgentResearchRuntime:
         collector = StrategyRunResultCollector()
         for event in events:
             for adapted_event in adapt_adk_event(event):
-                collector.record(adapted_event)
+                _record_adapted_event(
+                    adapted_event,
+                    collector=collector,
+                    narrator=self.narrator,
+                    queue=None,
+                )
         return slim_turn_result(collector.build())
 
 
@@ -182,13 +189,74 @@ def _push_adk_event(
     event: object,
     collector: StrategyRunResultCollector,
     queue: asyncio.Queue[dict],
+    narrator: ProgressNarratorAgent | None = None,
 ) -> bool:
     for adapted_event in adapt_adk_event(event):
-        timeline_start = len(collector.timeline)
-        collector.record(adapted_event)
-        new_items = collector.timeline[timeline_start:]
-        if new_items:
-            queue.put_nowait({"type": "timeline", "items": new_items})
+        _record_adapted_event(adapted_event, collector=collector, narrator=narrator, queue=queue)
         if len(collector.tool_calls) >= 20:
             return True
     return False
+
+
+def _record_adapted_event(
+    event: AdkStreamEvent,
+    *,
+    collector: StrategyRunResultCollector,
+    narrator: ProgressNarratorAgent | None,
+    queue: ThreadEventQueue | None,
+) -> None:
+    timeline_start = len(collector.timeline)
+    collector.record(event)
+    _push_new_timeline(collector.timeline[timeline_start:], queue)
+
+    if _should_emit_after(event, narrator):
+        _record_narration("after_action", event, collector=collector, narrator=narrator, queue=queue)
+
+
+def _should_emit_after(event: AdkStreamEvent, narrator: ProgressNarratorAgent | None) -> bool:
+    return bool(narrator and event.type in {"tool_result", "message"} and should_narrate(event))
+
+
+def _record_narration(
+    phase: str,
+    source: AdkStreamEvent,
+    *,
+    collector: StrategyRunResultCollector,
+    narrator: ProgressNarratorAgent | None,
+    queue: ThreadEventQueue | None,
+) -> None:
+    if narrator is None:
+        return
+    if _narration_count(collector.timeline) >= narrator.max_events:
+        return
+    text = narrator.narrate(phase=phase, event=source, recent_timeline=collector.timeline)
+    if not text:
+        return
+    event = AdkStreamEvent(
+        type="state_trace",
+        author="ProgressNarratorAgent",
+        payload=timeline_entry(
+            event_type="narration",
+            actor="ProgressNarratorAgent",
+            status="success",
+            stage=_source_stage(source),
+            message=text,
+        ),
+    )
+    timeline_start = len(collector.timeline)
+    collector.record(event)
+    _push_new_timeline(collector.timeline[timeline_start:], queue)
+
+
+def _push_new_timeline(items: list[dict], queue: ThreadEventQueue | None) -> None:
+    if items and queue is not None:
+        queue.put_nowait({"type": "timeline", "items": items})
+
+
+def _source_stage(event: AdkStreamEvent) -> str:
+    name = event.payload.get("name")
+    return str(name or event.author or event.type)
+
+
+def _narration_count(timeline: list[dict]) -> int:
+    return sum(1 for item in timeline if item.get("event_type") == "narration")

@@ -1,7 +1,7 @@
-import { DEFAULT_QUERY, els, setStatus } from "./dom.js?v=49";
-import { renderTraceDashboard } from "./trace_dashboard.js?v=49";
-import { createTracePanel } from "./trace_view.js?v=49";
-import { createTurnResult } from "./turn_result_view.js?v=49";
+import { DEFAULT_QUERY, els, setStatus } from "./dom.js?v=52";
+import { renderTraceDashboard } from "./trace_dashboard.js?v=52";
+import { createTracePanel } from "./trace_view.js?v=52";
+import { createTurnResult } from "./turn_result_view.js?v=52";
 
 let chatTurns = [];
 
@@ -111,7 +111,7 @@ function createBubble(turn) {
   meta.textContent = `${turn.role === "user" ? "用户" : "Agent"} · ${turn.ts}${turn.meta ? ` · ${turn.meta}` : ""}`;
   bubble.appendChild(meta);
   if (turn.trace?.length) {
-    const tracePanel = createTracePanel(turn.trace);
+    const tracePanel = createTracePanel(turn.trace, Boolean(turn.result));
     if (turn.result) tracePanel.open = false;
     bubble.appendChild(tracePanel);
   }

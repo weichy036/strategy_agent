@@ -1,4 +1,4 @@
-import { els } from "./dom.js?v=49";
+import { els } from "./dom.js?v=52";
 
 export function renderMetrics(metrics) {
   els.metricGrid.innerHTML = "";
