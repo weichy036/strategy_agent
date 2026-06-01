@@ -1,8 +1,13 @@
 from __future__ import annotations
 
+import logging
+
 from strategy_agent.domain.backtest import run_backtest_for_strategy
 from strategy_agent.schemas.strategy_schema import StrategySchema
 from strategy_agent.schemas.tool_contracts import ToolError, ToolResponse
+
+
+logger = logging.getLogger(__name__)
 
 
 def run_backtest(strategy_schema: dict, execution_options: dict | None = None) -> ToolResponse[dict]:
@@ -18,6 +23,7 @@ def run_backtest(strategy_schema: dict, execution_options: dict | None = None) -
             },
         )
     except Exception as exc:  # noqa: BLE001
+        logger.exception("回测执行异常：strategy_type=%s", strategy_schema.get("strategy_type"))
         return ToolResponse(
             ok=False,
             error=ToolError(

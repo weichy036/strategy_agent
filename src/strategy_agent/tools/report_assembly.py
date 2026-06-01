@@ -1,8 +1,13 @@
 from __future__ import annotations
 
+import logging
+
 from strategy_agent.schemas.result_page import ResultPage
 from strategy_agent.services.artifact_manager import artifact_url, build_artifact_name, persist_artifact_content
 from strategy_agent.schemas.tool_contracts import ToolError, ToolResponse
+
+
+logger = logging.getLogger(__name__)
 
 
 def assemble_result_page(
@@ -75,6 +80,7 @@ def _persist_equity_curve_svg(
             content_type="image/svg+xml",
         )
     except Exception:  # noqa: BLE001 - artifact persistence is an optimization; keep result rendering available.
+        logger.exception("收益曲线 artifact 持久化失败：session_id=%s name=%s", session_id, name)
         return None
     return {
         "artifact_id": name,
@@ -114,6 +120,7 @@ def _persist_log_json(
             content_type="application/json",
         )
     except Exception:  # noqa: BLE001 - artifact persistence is optional for rendering.
+        logger.exception("%s artifact 持久化失败：session_id=%s name=%s", log_name, session_id, name)
         return None
     return {
         "artifact_id": name,
@@ -152,6 +159,7 @@ def _persist_selection_log_json(
             content_type="application/json",
         )
     except Exception:  # noqa: BLE001 - artifact persistence is optional for rendering.
+        logger.exception("selection_log artifact 持久化失败：session_id=%s name=%s", session_id, name)
         return None
     return {
         "artifact_id": name,

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 
 import pandas as pd
@@ -8,6 +9,8 @@ from strategy_agent.config import settings
 from strategy_agent.data_access.normalize import load_daily_basic_frame
 from strategy_agent.data_access.storage import selection_daily_path, selection_monthly_path
 
+
+logger = logging.getLogger(__name__)
 
 SELECTION_DAILY_FIELDS = [
     "ts_code",
@@ -101,6 +104,7 @@ def ensure_selection_daily_frames(trade_dates: list[str]) -> None:
         try:
             frame = pd.read_parquet(path, columns=PRICE_FIELDS)
         except Exception:
+            logger.exception("读取前复权日线失败，已跳过：%s", path)
             continue
         if frame.empty:
             continue
@@ -142,6 +146,7 @@ def load_selection_monthly_sum(month: str, field: str) -> pd.DataFrame:
         try:
             frame = pd.read_parquet(source, columns=columns)
         except Exception:
+            logger.exception("读取月度汇总字段失败，已跳过：%s field=%s", source, field)
             continue
         if frame.empty:
             continue
@@ -186,6 +191,7 @@ def ensure_selection_monthly_returns(months: list[str]) -> None:
         try:
             frame = pd.read_parquet(source, columns=["trade_date", "close"])
         except Exception:
+            logger.exception("读取月度收益字段失败，已跳过：%s", source)
             continue
         if frame.empty:
             continue
@@ -237,6 +243,7 @@ def _price_row(path: Path, trade_date: str) -> dict | None:
     try:
         frame = pd.read_parquet(path, columns=PRICE_FIELDS)
     except Exception:
+        logger.exception("读取截面价格失败，已跳过：%s trade_date=%s", path, trade_date)
         return None
     if frame.empty:
         return None

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 from typing import Any
 
@@ -24,6 +25,8 @@ from strategy_agent.schemas.data_research import (
 )
 from strategy_agent.services.factor_catalog import canonical_factor_name, factor_definition
 
+
+logger = logging.getLogger(__name__)
 
 PRICE_FIELDS = ["trade_date", "open", "high", "low", "close"]
 SELECTION_BASE_FIELDS = ["ts_code", "trade_date"]
@@ -175,6 +178,7 @@ def _inspect_parquet(path: Path, dataset: str, symbol: str | None, fields: list[
     try:
         frame = pd.read_parquet(path)
     except Exception:
+        logger.exception("检查 parquet 覆盖范围失败：%s", path)
         return LocalCoverage(dataset=dataset, symbol=symbol, exists=False, missing_fields=fields)
     missing = [field for field in fields if field not in frame.columns]
     dates = frame["trade_date"].astype(str) if "trade_date" in frame.columns and not frame.empty else None

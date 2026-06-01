@@ -53,8 +53,7 @@ def run_rotation_backtest(schema: StrategySchema) -> dict[str, Any]:
         target_symbols = rebalance_plans.get(trade_date)
         if target_symbols is not None:
             cash = _sell_all(trade_date, holdings, cash, price_cache, start_date=calendar[0], end_date=calendar[-1], commission=commission, slippage=slippage, trade_log=trade_log)
-            _buy_targets(trade_date, target_symbols, holdings, cash, price_cache, start_date=calendar[0], end_date=calendar[-1], commission=commission, slippage=slippage, trade_log=trade_log)
-            cash = _cash_after_buys(trade_log, cash)
+            cash = _buy_targets(trade_date, target_symbols, holdings, cash, price_cache, start_date=calendar[0], end_date=calendar[-1], commission=commission, slippage=slippage, trade_log=trade_log)
             selection_log.append({
                 "trade_date": trade_date,
                 "target_count": len(target_symbols),
@@ -120,29 +119,24 @@ def _buy_targets(
     commission: float,
     slippage: float,
     trade_log: list[dict[str, Any]],
-) -> None:
+) -> float:
     tradable = []
     for symbol in target_symbols:
         frame = _price_frame(price_cache, symbol, start_date, end_date)
         if trade_date in frame.index and float(frame.at[trade_date, "open"]) > 0:
             tradable.append((symbol, float(frame.at[trade_date, "open"])))
     if not tradable:
-        return
+        return cash
+
     allocation = cash / len(tradable)
     for symbol, open_price in tradable:
         exec_price = open_price * (1.0 + slippage)
-        shares = allocation * (1.0 - commission) / exec_price
+        shares = allocation / (exec_price * (1.0 + commission))
+        cost = shares * exec_price
+        fee = cost * commission
+        cash -= cost + fee
         holdings[symbol] = holdings.get(symbol, 0.0) + shares
-        trade_log.append(ExecutedTrade(trade_date, "buy", symbol, float(shares), float(exec_price), 0.0).__dict__)
-
-
-def _cash_after_buys(trade_log: list[dict[str, Any]], cash_before: float) -> float:
-    cash = cash_before
-    for trade in reversed(trade_log):
-        if trade["side"] != "buy":
-            break
-        cash -= float(trade["shares"]) * float(trade["price"])
-        trade["nav_after"] = float(cash)
+        trade_log.append(ExecutedTrade(trade_date, "buy", symbol, float(shares), float(exec_price), float(cash)).__dict__)
     return cash
 
 

@@ -4,7 +4,7 @@ import asyncio
 from collections.abc import AsyncIterator
 from dataclasses import asdict
 from queue import Empty, Queue
-from threading import Thread
+from threading import Lock, Thread
 import time
 from typing import Any
 
@@ -25,15 +25,17 @@ def _to_user_content(message: str) -> types.Content:
 class AgentResearchRuntime:
     def __init__(self) -> None:
         self.runner = build_runner()
+        self._runner_lock = Lock()
 
     async def _collect_events_async(self, *, user_id: str, session_id: str, message: str):
         events = []
-        async for event in self.runner.run_async(
-            user_id=user_id,
-            session_id=session_id,
-            new_message=_to_user_content(message),
-        ):
-            events.append(event)
+        with self._runner_lock:
+            async for event in self.runner.run_async(
+                user_id=user_id,
+                session_id=session_id,
+                new_message=_to_user_content(message),
+            ):
+                events.append(event)
         return events
 
     async def stream_turn(
@@ -110,14 +112,15 @@ class AgentResearchRuntime:
         saw_event = False
         token = set_live_trace_queue(queue)
         try:
-            async for event in self.runner.run_async(
-                user_id=user_id,
-                session_id=session_id,
-                new_message=_to_user_content(message),
-            ):
-                saw_event = True
-                if _push_adk_event(event, collector, queue):
-                    break
+            with self._runner_lock:
+                async for event in self.runner.run_async(
+                    user_id=user_id,
+                    session_id=session_id,
+                    new_message=_to_user_content(message),
+                ):
+                    saw_event = True
+                    if _push_adk_event(event, collector, queue):
+                        break
             if not saw_event:
                 raise RuntimeError(
                     "No agent events received. Please check model connectivity and provider configuration."

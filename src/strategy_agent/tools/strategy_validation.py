@@ -42,12 +42,6 @@ def validate_strategy_schema(strategy_schema: dict) -> ToolResponse[dict]:
             missing_fields.append("portfolio.position_count")
         if not schema.portfolio or not schema.portfolio.weight_method:
             missing_fields.append("portfolio.weight_method")
-    if schema.strategy_type == "screen_and_hold":
-        if not schema.selection or not schema.selection.filters:
-            missing_fields.append("selection.filters")
-        if not schema.selection or not schema.selection.hold_period:
-            missing_fields.append("selection.hold_period")
-
     if schema.period.start is None or schema.period.end is None:
         warnings.append("period.start_or_end_default_needed")
 
