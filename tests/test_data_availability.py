@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+import pandas as pd
+
 from strategy_agent.agents.data_research import apply_schema_patch
+from strategy_agent.data_access.stock_metadata import stock_name_map
 from strategy_agent.services.data_availability import inspect_strategy_data
 
 
@@ -39,6 +42,29 @@ def test_inspect_bare_codes_are_normalized_before_data_check() -> None:
     assert etf_report.required_datasets[0].symbols == ["510300.SH"]
     assert stock_report.is_ready
     assert stock_report.required_datasets[0].symbols == ["300750.SZ"]
+
+
+def test_inspect_stock_name_is_normalized_before_data_check(tmp_path, monkeypatch) -> None:
+    path = tmp_path / "stock_info.parquet"
+    pd.DataFrame([{"ts_code": "300274.SZ", "name": "阳光电源"}]).to_parquet(path, index=False)
+    monkeypatch.setenv("STOCK_INFO_PATH", str(path))
+    stock_name_map.cache_clear()
+
+    try:
+        report = inspect_strategy_data(
+            {
+                "strategy_type": "signal_trading",
+                "universe": {"type": "instrument", "symbols": ["阳光电源"]},
+                "period": {"frequency": "1d", "start": "20230101", "end": "20241231"},
+            }
+        )
+
+        assert report.is_ready
+        assert report.required_datasets[0].symbols == ["300274.SZ"]
+        assert report.schema_patch == {"universe.symbols": ["300274.SZ"]}
+        assert "daily_qfq:阳光电源:missing" not in report.blocking_issues
+    finally:
+        stock_name_map.cache_clear()
 
 
 def test_inspect_missing_stock_data_blocks() -> None:
@@ -150,6 +176,49 @@ def test_data_research_schema_patch_updates_executable_schema_without_mutating_o
     assert schema["selection"]["ranking"]["sort_by"] == "last_month_return"
     assert patched["selection"]["ranking"]["sort_by"] == "monthly_return"
     assert patched["selection"]["ranking"]["lookback"] == "previous_month_return"
+
+
+def test_data_research_schema_patch_normalizes_named_instrument(tmp_path, monkeypatch) -> None:
+    path = tmp_path / "stock_info.parquet"
+    pd.DataFrame([{"ts_code": "300274.SZ", "name": "阳光电源"}]).to_parquet(path, index=False)
+    monkeypatch.setenv("STOCK_INFO_PATH", str(path))
+    stock_name_map.cache_clear()
+    schema = {
+        "strategy_type": "signal_trading",
+        "universe": {"type": "instrument", "symbols": ["阳光电源"]},
+    }
+
+    try:
+        report = inspect_strategy_data(schema)
+        patched = apply_schema_patch(schema, report.schema_patch)
+
+        assert patched["universe"]["symbols"] == ["300274.SZ"]
+        assert schema["universe"]["symbols"] == ["阳光电源"]
+    finally:
+        stock_name_map.cache_clear()
+
+
+def test_data_research_schema_patch_converts_single_symbol_universe_to_instrument(tmp_path, monkeypatch) -> None:
+    path = tmp_path / "stock_info.parquet"
+    pd.DataFrame([{"ts_code": "300274.SZ", "name": "阳光电源"}]).to_parquet(path, index=False)
+    monkeypatch.setenv("STOCK_INFO_PATH", str(path))
+    stock_name_map.cache_clear()
+    schema = {
+        "strategy_type": "signal_trading",
+        "universe": {"type": "equity_universe", "symbols": ["阳光电源"]},
+    }
+
+    try:
+        report = inspect_strategy_data(schema)
+        patched = apply_schema_patch(schema, report.schema_patch)
+
+        assert report.schema_patch == {
+            "universe.type": "instrument",
+            "universe.symbols": ["300274.SZ"],
+        }
+        assert patched["universe"] == {"type": "instrument", "symbols": ["300274.SZ"]}
+    finally:
+        stock_name_map.cache_clear()
 
 
 if __name__ == "__main__":

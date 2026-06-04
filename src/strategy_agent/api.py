@@ -13,6 +13,7 @@ from google.adk.models.registry import LLMRegistry
 from pydantic import BaseModel, Field
 
 from strategy_agent.config import settings
+from strategy_agent.data_update import collect_data_status
 from strategy_agent.services.adk_event_adapter import adapt_adk_event, extract_text_from_content
 from strategy_agent.services.agent_runtime import get_agent_runtime
 from strategy_agent.services.response_slimmer import slim_turn_result
@@ -241,6 +242,10 @@ def create_api_app() -> FastAPI:
                 "reason": "check=0 (configuration-only inspection)",
             }
         return status
+
+    @app.get("/data/status")
+    def data_status(stale_after_days: int = Query(default=7, ge=0, le=365)) -> dict[str, Any]:
+        return collect_data_status(stale_after_days=stale_after_days).to_dict()
 
     @app.get("/research/examples")
     def research_examples() -> dict[str, list[str]]:

@@ -5,6 +5,7 @@ from pathlib import Path
 
 from strategy_agent.config import settings
 from strategy_agent.constants import DEFAULT_ETF_ALIASES, DEFAULT_INDEX_ALIASES
+from strategy_agent.data_access.stock_metadata import stock_name_map
 
 
 def _normalize_query(query: str) -> str:
@@ -72,6 +73,19 @@ def resolve_instrument(query: str) -> dict[str, str | bool | list[dict[str, str]
             "candidates": [],
         }
 
+    stock_candidates = _stock_name_candidates(normalized)
+    if len(stock_candidates) == 1:
+        hit = stock_candidates[0]
+        return {
+            "resolved": True,
+            "is_ambiguous": False,
+            "instrument": {
+                **hit,
+                "market": "CN_A",
+            },
+            "candidates": [],
+        }
+
     candidates: list[dict[str, str]] = []
     for base, asset_type in (
         (settings.fund_daily_dir, "fund"),
@@ -106,6 +120,16 @@ def resolve_instrument(query: str) -> dict[str, str | bool | list[dict[str, str]
         "instrument": None,
         "candidates": candidates,
     }
+
+
+def _stock_name_candidates(normalized: str) -> list[dict[str, str]]:
+    candidates = []
+    for code, name in stock_name_map().items():
+        clean_name = _normalize_query(name)
+        if normalized != clean_name:
+            continue
+        candidates.append({"ts_code": code, "name": name, "asset_type": "stock"})
+    return candidates
 
 
 def _resolve_code_from_local_files(code: str) -> str:

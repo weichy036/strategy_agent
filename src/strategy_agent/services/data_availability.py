@@ -300,12 +300,30 @@ def _raw_ranking_field(strategy_schema: dict[str, Any]) -> str | None:
 
 def schema_patch_for_strategy(strategy_schema: dict[str, Any]) -> dict[str, Any]:
     patch = _rotation_schema_defaults(strategy_schema)
+    patch.update(_instrument_schema_patch(strategy_schema))
     raw = _raw_ranking_field(strategy_schema)
     canonical = canonical_factor_name(raw)
     if raw and canonical and raw != canonical:
         patch["selection.ranking.sort_by"] = canonical
         if canonical == "monthly_return":
             patch["selection.ranking.lookback"] = "previous_month_return"
+    return patch
+
+
+def _instrument_schema_patch(strategy_schema: dict[str, Any]) -> dict[str, Any]:
+    universe = strategy_schema.get("universe") or {}
+    strategy_type = strategy_schema.get("strategy_type")
+    raw_symbols = [str(item) for item in (universe.get("symbols") or [])]
+    if universe.get("type") != "instrument" and not (
+        strategy_type in {"signal_trading", "rule_based_timing"} and len(raw_symbols) == 1
+    ):
+        return {}
+    normalized = [_normalize_symbol(symbol) for symbol in raw_symbols]
+    patch: dict[str, Any] = {}
+    if universe.get("type") != "instrument":
+        patch["universe.type"] = "instrument"
+    if raw_symbols and normalized != raw_symbols:
+        patch["universe.symbols"] = normalized
     return patch
 
 
