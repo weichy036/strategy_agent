@@ -19,6 +19,8 @@ dependencies = [
 [project.scripts]
 strategy-agent = "strategy_agent:main"
 strategy-agent-api = "strategy_agent.api:main"
+strategy-agent-data-maintenance = "strategy_agent.data_update.runner:main"
+strategy-agent-data-plan = "strategy_agent.data_update.plan:main"
 strategy-agent-data-status = "strategy_agent.data_update.status:main"
 
 [build-system]

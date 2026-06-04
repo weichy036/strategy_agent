@@ -13,7 +13,7 @@ from google.adk.models.registry import LLMRegistry
 from pydantic import BaseModel, Field
 
 from strategy_agent.config import settings
-from strategy_agent.data_update import collect_data_status
+from strategy_agent.data_update import collect_data_status, plan_data_update, run_data_maintenance
 from strategy_agent.services.adk_event_adapter import adapt_adk_event, extract_text_from_content
 from strategy_agent.services.agent_runtime import get_agent_runtime
 from strategy_agent.services.response_slimmer import slim_turn_result
@@ -246,6 +246,24 @@ def create_api_app() -> FastAPI:
     @app.get("/data/status")
     def data_status(stale_after_days: int = Query(default=7, ge=0, le=365)) -> dict[str, Any]:
         return collect_data_status(stale_after_days=stale_after_days).to_dict()
+
+    @app.get("/data/update-plan")
+    def data_update_plan(
+        profile: str = Query(default="daily_light", pattern="^(daily_light|weekly_full)$"),
+        stale_after_days: int = Query(default=7, ge=0, le=365),
+    ) -> dict[str, Any]:
+        return plan_data_update(profile=profile, stale_after_days=stale_after_days).to_dict()
+
+    @app.post("/data/maintenance/dry-run")
+    def data_maintenance_dry_run(
+        profile: str = Query(default="daily_light", pattern="^(daily_light|weekly_full)$"),
+        stale_after_days: int = Query(default=7, ge=0, le=365),
+    ) -> dict[str, Any]:
+        return run_data_maintenance(profile=profile, stale_after_days=stale_after_days).to_dict()
+
+    @app.post("/data/maintenance/refresh-meta")
+    def data_maintenance_refresh_meta() -> dict[str, Any]:
+        return run_data_maintenance(mode="refresh_meta").to_dict()
 
     @app.get("/research/examples")
     def research_examples() -> dict[str, list[str]]:
