@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
@@ -14,7 +15,6 @@ from strategy_agent.services.runtime_models import AdkStreamEvent
 
 CompletionFn = Callable[..., Any]
 NARRATED_TOOL_RESULTS = {
-    "query_market_data",
     "run_backtest",
     "compute_metrics",
     "assemble_result_page",
@@ -23,7 +23,6 @@ NARRATED_AGENT_MESSAGES = {
     "ClarificationAgent",
     "StrategyDesignerAgent",
     "DataResearchAgent",
-    "ResultExplanationAgent",
 }
 
 
@@ -32,7 +31,7 @@ class ProgressNarratorAgent:
     """Generate user-facing progress narration from real runtime events."""
 
     completion_fn: CompletionFn = completion
-    max_events: int = 8
+    max_events: int = 6
     timeout_seconds: int = 8
 
     def narrate(self, *, phase: str, event: AdkStreamEvent, recent_timeline: list[dict[str, Any]] | None = None) -> str | None:
@@ -58,7 +57,7 @@ class ProgressNarratorAgent:
             return None
 
         text = _response_text(response)
-        if not text:
+        if not text or _has_placeholder(text):
             return None
         return text[:180]
 
@@ -167,6 +166,10 @@ def _response_text(response: Any) -> str:
     except Exception:
         return ""
     return str(content or "").strip().strip('"').strip()
+
+
+def _has_placeholder(text: str) -> bool:
+    return bool(re.search(r"(?:X%|Y%|Z%|N个月|20XX|XX年|某个因子)", text))
 
 
 __all__ = ["ProgressNarratorAgent", "should_narrate"]

@@ -229,6 +229,8 @@ def _record_narration(
         return
     if _narration_count(collector.timeline) >= narrator.max_events:
         return
+    if _should_skip_narration(source, collector):
+        return
     text = narrator.narrate(phase=phase, event=source, recent_timeline=collector.timeline)
     if not text:
         return
@@ -251,6 +253,15 @@ def _record_narration(
 def _push_new_timeline(items: list[dict], queue: ThreadEventQueue | None) -> None:
     if items and queue is not None:
         queue.put_nowait({"type": "timeline", "items": items})
+
+
+def _should_skip_narration(source: AdkStreamEvent, collector: StrategyRunResultCollector) -> bool:
+    clarification = collector.result_data.get("clarification")
+    if isinstance(clarification, dict) and clarification.get("needs_clarification"):
+        return source.author not in {"ClarificationAgent", "ProgressNarratorAgent"}
+    if source.author == "ResultExplanationAgent":
+        return not bool(collector.result_data.get("result_page") or collector.result_data.get("backtest"))
+    return False
 
 
 def _source_stage(event: AdkStreamEvent) -> str:
