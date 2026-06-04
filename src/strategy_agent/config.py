@@ -25,6 +25,8 @@ class Settings:
     adk_model: str = os.getenv("ADK_MODEL", "deepseek/deepseek-chat")
     llm_timeout_seconds: int = int(os.getenv("LLM_TIMEOUT_SECONDS", "30"))
     agent_idle_timeout_seconds: int = int(os.getenv("AGENT_IDLE_TIMEOUT_SECONDS", "75"))
+    enable_local_skill_code_executor: bool = os.getenv("ENABLE_LOCAL_SKILL_CODE_EXECUTOR", "").lower() in {"1", "true", "yes"}
+    skill_script_timeout_seconds: int = int(os.getenv("SKILL_SCRIPT_TIMEOUT_SECONDS", "120"))
     data_root: Path = DATA_ROOT
     docs_root: Path = DOCS_ROOT
     raw_root: Path = DATA_ROOT / "raw"

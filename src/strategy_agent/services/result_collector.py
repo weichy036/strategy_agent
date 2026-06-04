@@ -108,6 +108,7 @@ class StrategyRunResultCollector:
         validation = self.result_data.get("validation")
         if self.status != "completed" and isinstance(validation, dict) and validation.get("is_complete") is False:
             self.status = "needs_clarification"
+            self.result_data["clarification"] = _clarification_from_validation(validation, assistant_message)
 
         if self.status == "needs_clarification" and "clarification" not in self.result_data:
             self.result_data["clarification"] = {
@@ -243,6 +244,7 @@ class StrategyRunResultCollector:
             self.result_data["validation"] = payload.get("data")
             if payload.get("ok") and isinstance(payload.get("data"), dict) and not payload["data"].get("is_complete"):
                 self.status = "needs_clarification"
+                self.result_data["clarification"] = _clarification_from_validation(payload["data"], "")
         elif name == "run_backtest" and payload.get("ok"):
             self.result_data["backtest"] = payload.get("data")
         elif name == "compute_metrics" and payload.get("ok"):
@@ -290,6 +292,29 @@ def _short_text(text: str, limit: int = 120) -> str:
     if len(compact) <= limit:
         return compact
     return f"{compact[: limit - 1]}..."
+
+
+def _clarification_from_validation(validation: dict[str, Any], assistant_message: str) -> dict[str, Any]:
+    fields = list(validation.get("missing_fields") or validation.get("invalid_fields") or [])
+    question = assistant_message if assistant_message and not assistant_message.lstrip().startswith(("{", "[")) else _question_for_fields(fields)
+    return {
+        "needs_clarification": True,
+        "next_question": question,
+        "must_ask_fields": fields,
+    }
+
+
+def _question_for_fields(fields: list[str]) -> str:
+    field = fields[0] if fields else ""
+    questions = {
+        "universe.symbols": "我还需要确认回测标的：你想回测哪只股票、ETF 或指数？",
+        "signals.buy": "我还需要确认买入规则：满足什么条件时买入？",
+        "signals.sell": "我还需要确认卖出规则：满足什么条件时卖出？",
+        "selection.ranking": "我还需要确认选股排序规则：按哪个指标选择股票？",
+        "portfolio.position_count": "我还需要确认持仓数量：每次选多少只股票？",
+        "portfolio.weight_method": "我还需要确认组合权重：等权持有，还是按市值/成交额等方式加权？",
+    }
+    return questions.get(field, f"我还需要补充字段 {field or '策略条件'} 后才能继续回测。")
 
 
 def _tool_payload(payload: Any) -> Any:

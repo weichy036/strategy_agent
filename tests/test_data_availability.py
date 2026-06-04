@@ -73,6 +73,27 @@ def test_rotation_amount_ranking_uses_selection_daily_contract() -> None:
     assert report.required_factors[0].source_type == "raw_field"
 
 
+def test_rotation_schema_patch_infers_portfolio_from_top_n() -> None:
+    report = inspect_strategy_data(
+        {
+            "strategy_type": "cross_sectional_rotation",
+            "universe": {"type": "equity_universe", "symbols": []},
+            "period": {"frequency": "1d", "start": None, "end": None},
+            "selection": {
+                "ranking": {"sort_by": "amount", "order": "desc", "top_n": 10},
+                "hold_period": {"type": "calendar", "frequency": "monthly"},
+            },
+        }
+    )
+
+    assert report.is_ready
+    assert report.schema_patch == {
+        "portfolio.position_count": 10,
+        "portfolio.weight_method": "equal",
+        "portfolio.rebalance_frequency": "monthly",
+    }
+
+
 def test_previous_month_return_ranking_is_derived_from_local_prices() -> None:
     report = inspect_strategy_data(
         {
@@ -90,10 +111,8 @@ def test_previous_month_return_ranking_is_derived_from_local_prices() -> None:
     assert report.required_factors[0].name == "monthly_return"
     assert report.required_factors[0].source_type == "derived"
     assert report.required_factors[0].base_fields == ["trade_date", "close"]
-    assert report.schema_patch == {
-        "selection.ranking.sort_by": "monthly_return",
-        "selection.ranking.lookback": "previous_month_return",
-    }
+    assert report.schema_patch["selection.ranking.sort_by"] == "monthly_return"
+    assert report.schema_patch["selection.ranking.lookback"] == "previous_month_return"
 
 
 def test_unsupported_rotation_factor_blocks_with_factor_context() -> None:

@@ -94,6 +94,36 @@ def test_result_collector_parses_json_string_state_delta_outputs():
     assert collector.build().data["intent"]["is_backtest_request"] is False
 
 
+def test_result_collector_uses_specific_validation_clarification():
+    collector = StrategyRunResultCollector()
+    collector.record(
+        AdkStreamEvent(
+            type="tool_result",
+            author="StrategyExecutionAgent",
+            payload={
+                "name": "validate_strategy_schema",
+                "response": {
+                    "result": {
+                        "ok": True,
+                        "data": {
+                            "is_valid": True,
+                            "is_complete": False,
+                            "missing_fields": ["portfolio.position_count"],
+                            "invalid_fields": [],
+                        },
+                    }
+                },
+            },
+        )
+    )
+
+    result = collector.build()
+
+    assert result.status == "needs_clarification"
+    assert result.data["clarification"]["next_question"] == "我还需要确认持仓数量：每次选多少只股票？"
+    assert result.data["clarification"]["must_ask_fields"] == ["portfolio.position_count"]
+
+
 def test_quant_backtest_skill_toolset_loads_local_skill():
     toolset = create_quant_backtest_skill_toolset()
     tools = asyncio.run(toolset.get_tools())

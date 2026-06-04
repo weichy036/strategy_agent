@@ -298,15 +298,35 @@ def _raw_ranking_field(strategy_schema: dict[str, Any]) -> str | None:
     return str(sort_by) if sort_by else None
 
 
-def schema_patch_for_strategy(strategy_schema: dict[str, Any]) -> dict[str, str]:
+def schema_patch_for_strategy(strategy_schema: dict[str, Any]) -> dict[str, Any]:
+    patch = _rotation_schema_defaults(strategy_schema)
     raw = _raw_ranking_field(strategy_schema)
     canonical = canonical_factor_name(raw)
     if raw and canonical and raw != canonical:
-        patch = {"selection.ranking.sort_by": canonical}
+        patch["selection.ranking.sort_by"] = canonical
         if canonical == "monthly_return":
             patch["selection.ranking.lookback"] = "previous_month_return"
-        return patch
-    return {}
+    return patch
+
+
+def _rotation_schema_defaults(strategy_schema: dict[str, Any]) -> dict[str, Any]:
+    if strategy_schema.get("strategy_type") != "cross_sectional_rotation":
+        return {}
+
+    selection = strategy_schema.get("selection") or {}
+    ranking = selection.get("ranking") or {}
+    portfolio = strategy_schema.get("portfolio") or {}
+    hold_period = selection.get("hold_period") or {}
+    patch: dict[str, Any] = {}
+
+    top_n = ranking.get("top_n")
+    if top_n and not portfolio.get("position_count"):
+        patch["portfolio.position_count"] = top_n
+    if "portfolio" not in strategy_schema or not isinstance(strategy_schema.get("portfolio"), dict):
+        patch["portfolio.weight_method"] = "equal"
+    if not portfolio.get("rebalance_frequency") and hold_period.get("frequency"):
+        patch["portfolio.rebalance_frequency"] = hold_period.get("frequency")
+    return patch
 
 
 def _previous_month(trade_date: str) -> str:

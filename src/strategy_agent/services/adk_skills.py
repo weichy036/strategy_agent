@@ -4,14 +4,28 @@ from pathlib import Path
 from typing import Any
 
 import yaml
+from google.adk.code_executors import UnsafeLocalCodeExecutor
 from google.adk.skills.models import Frontmatter, Resources, Script, Skill
 from google.adk.tools.skill_toolset import SkillToolset
 
 from strategy_agent.config import PROJECT_ROOT
+from strategy_agent.config import settings
+from strategy_agent.tools.skill_script_runner import run_allowed_skill_script
 
 
 def create_quant_backtest_skill_toolset() -> SkillToolset:
-    return SkillToolset(skills=[load_local_skill(PROJECT_ROOT / "skills" / "quant_backtest_cn")])
+    return SkillToolset(
+        skills=[load_local_skill(PROJECT_ROOT / "skills" / "quant_backtest_cn")],
+        code_executor=_local_code_executor(),
+        script_timeout=settings.skill_script_timeout_seconds,
+        additional_tools=[run_allowed_skill_script],
+    )
+
+
+def _local_code_executor() -> UnsafeLocalCodeExecutor | None:
+    if not settings.enable_local_skill_code_executor:
+        return None
+    return UnsafeLocalCodeExecutor(timeout_seconds=settings.skill_script_timeout_seconds)
 
 
 def load_local_skill(skill_dir: Path) -> Skill:

@@ -2,7 +2,8 @@
 name: quant-backtest-cn
 description: Use this skill when converting Chinese natural-language investment ideas into StrategySchema v1, validating assumptions, running reproducible local backtests, and explaining CN market backtest results with equity curves.
 metadata:
-  adk_additional_tools: []
+  adk_additional_tools:
+    - run_allowed_skill_script
 ---
 
 # Quant Backtest CN

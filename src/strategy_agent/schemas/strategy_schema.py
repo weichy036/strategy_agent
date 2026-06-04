@@ -128,7 +128,7 @@ class StrategySchema(BaseModel):
     signals: Signals | None = None
     selection: Selection | None = None
     portfolio: Portfolio | None = None
-    execution: Execution
+    execution: Execution = Field(default_factory=Execution)
     costs: Costs | None = None
     constraints: Constraints | None = None
     metadata: Metadata | None = None

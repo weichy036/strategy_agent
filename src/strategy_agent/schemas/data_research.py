@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
@@ -70,5 +70,5 @@ class DataAvailabilityReport(BaseModel):
     local_coverage: list[LocalCoverage] = Field(default_factory=list)
     factor_build_plan: list[FactorBuildPlan] = Field(default_factory=list)
     fetch_plan: list[DataFetchPlan] = Field(default_factory=list)
-    schema_patch: dict[str, str] = Field(default_factory=dict)
+    schema_patch: dict[str, Any] = Field(default_factory=dict)
     rationale: str

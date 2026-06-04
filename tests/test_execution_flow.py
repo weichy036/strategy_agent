@@ -140,6 +140,38 @@ def test_monthly_amount_rotation_execution_flow_success() -> None:
     assert (settings.artifact_root / "test-monthly-amount" / trade_artifact["artifact_id"]).exists()
 
 
+def test_monthly_amount_rotation_infers_missing_portfolio_fields() -> None:
+    schema = {
+        "schema_version": "v1",
+        "name": "月度成交额TOP10轮动",
+        "market": "CN",
+        "strategy_type": "cross_sectional_rotation",
+        "universe": {"type": "equity_universe", "symbols": [], "scope": "A股全市场"},
+        "period": {"frequency": "1d", "start": "20240101", "end": "20241231"},
+        "selection": {
+            "ranking": {"sort_by": "amount", "order": "desc", "top_n": 10, "lookback": "previous_month_sum"},
+            "hold_period": {"type": "calendar", "frequency": "monthly"},
+        },
+    }
+
+    from strategy_agent.agents.data_research import apply_schema_patch
+    from strategy_agent.services.data_availability import inspect_strategy_data
+
+    report = inspect_strategy_data(schema)
+    executable_schema = apply_schema_patch(schema, report.schema_patch)
+    results = [(step.name, step.run()) for step in strategy_execution_steps(executable_schema, session_id="test-monthly-amount-inferred")]
+
+    assert [name for name, _ in results] == [
+        "validate_strategy_schema",
+        "query_market_data",
+        "run_backtest",
+        "compute_metrics",
+        "assemble_result_page",
+    ]
+    assert all(response.ok for _, response in results)
+    assert dict(results)["run_backtest"].data["summary"]["trade_count"] > 0
+
+
 def test_previous_month_return_rotation_execution_flow_success() -> None:
     schema = {
         "schema_version": "v1",
