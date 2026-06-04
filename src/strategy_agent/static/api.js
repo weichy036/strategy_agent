@@ -1,11 +1,17 @@
 const REQUEST_CONTEXT = {
   user_id: "web-user",
-  session_id: "thread-macd-510300",
+  session_id: localStorage.getItem("tradex.activeSessionId") || "thread-macd-510300",
 };
 
 
 export function setActiveSession(sessionId) {
   REQUEST_CONTEXT.session_id = sessionId || REQUEST_CONTEXT.session_id;
+  localStorage.setItem("tradex.activeSessionId", REQUEST_CONTEXT.session_id);
+}
+
+
+export function getActiveSession() {
+  return REQUEST_CONTEXT.session_id;
 }
 
 
@@ -20,6 +26,16 @@ export async function loadSessionHistory() {
   const params = new URLSearchParams({ user_id: REQUEST_CONTEXT.user_id });
   const res = await fetch(`/research/session/${encodeURIComponent(REQUEST_CONTEXT.session_id)}/history?${params}`);
   if (!res.ok) throw new Error(`history unavailable: ${res.status}`);
+  return res.json();
+}
+
+
+export async function deleteSession(sessionId) {
+  const params = new URLSearchParams({ user_id: REQUEST_CONTEXT.user_id });
+  const res = await fetch(`/research/session/${encodeURIComponent(sessionId) || REQUEST_CONTEXT.session_id}?${params}`, {
+    method: "DELETE",
+  });
+  if (!res.ok) throw new Error(`delete unavailable: ${res.status}`);
   return res.json();
 }
 

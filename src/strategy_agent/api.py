@@ -272,6 +272,19 @@ def create_api_app() -> FastAPI:
             state=session.state,
         )
 
+    @app.delete("/research/session/{session_id}")
+    async def research_session_delete(
+        session_id: str,
+        user_id: str = Query(default="web-user"),
+    ) -> dict[str, Any]:
+        runtime = get_agent_runtime()
+        await runtime.runner.session_service.delete_session(
+            app_name=runtime.runner.app_name,
+            user_id=user_id,
+            session_id=session_id,
+        )
+        return {"ok": True, "session_id": session_id}
+
     @app.post("/research/run", response_model=ResearchRunResponse)
     def research_run(payload: ResearchRunRequest) -> ResearchRunResponse:
         try:

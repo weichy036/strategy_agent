@@ -25,11 +25,22 @@ def test_progress_narrator_generates_model_text(monkeypatch) -> None:
         payload={"name": "run_backtest", "response": {"result": {"ok": True, "data": {"equity_curve": [{"nav": 1.0}]}}}},
     )
 
-    text = narrator.narrate(phase="after_action", event=event)
+    text = narrator.narrate(
+        phase="after_action",
+        event=event,
+        recent_timeline=[
+            {"event_type": "narration", "message": "我已经确认了策略条件，可以继续。"},
+        ],
+    )
 
     assert text == "我先检查本地数据是否满足这次回测。"
     assert "ProgressNarratorAgent" in captured["messages"][0]["content"]
-    assert "run_backtest" in captured["messages"][0]["content"]
+    assert "执行回测" in captured["messages"][0]["content"]
+    assert "叙事上下文" in captured["messages"][0]["content"]
+    assert "最近已展示给用户的叙事" in captured["messages"][0]["content"]
+    assert "避免连续使用相同开头" in captured["messages"][0]["content"]
+    assert "不要展示内部流程判断" in captured["messages"][0]["content"]
+    assert "不打断用户" not in captured["messages"][0]["content"]
 
 
 def test_progress_narrator_does_not_fallback_to_hardcoded_text(monkeypatch) -> None:
@@ -60,7 +71,14 @@ def test_progress_narrator_rejects_placeholder_text(monkeypatch) -> None:
 
 
 def test_should_narrate_runtime_actions() -> None:
-    assert not should_narrate(AdkStreamEvent(type="tool_call", author="agent", payload={"name": "run_backtest"}))
+    assert should_narrate(
+        AdkStreamEvent(type="tool_call", author="agent", payload={"name": "run_backtest"}),
+        phase="before_action",
+    )
+    assert should_narrate(
+        AdkStreamEvent(type="tool_call", author="agent", payload={"name": "query_market_data"}),
+        phase="before_action",
+    )
     assert should_narrate(AdkStreamEvent(type="tool_result", author="agent", payload={"name": "run_backtest"}))
     assert not should_narrate(AdkStreamEvent(type="tool_result", author="agent", payload={"name": "query_market_data"}))
     assert should_narrate(AdkStreamEvent(type="message", author="StrategyDesignerAgent", payload={}))

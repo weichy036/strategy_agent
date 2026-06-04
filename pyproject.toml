@@ -7,8 +7,9 @@ authors = [
 ]
 requires-python = ">=3.13"
 dependencies = [
-    "google-adk==2.0.0",
+    "google-adk[db]==2.0.0",
     "google-cloud-storage>=3.0.0",
+    "greenlet>=3.2.4",
     "litellm>=1.83.12",
     "pandas>=3.0.2",
     "pyarrow>=24.0.0",

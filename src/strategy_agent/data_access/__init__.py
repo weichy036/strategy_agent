@@ -12,6 +12,7 @@ from .selection_daily import (
     load_selection_monthly_sum,
     resolve_selection_trade_date,
 )
+from .stock_metadata import stock_display_items, stock_label, stock_name_map
 
 __all__ = [
     "SELECTION_DAILY_FIELDS",
@@ -24,4 +25,7 @@ __all__ = [
     "load_selection_monthly_sum",
     "resolve_latest_trade_date",
     "resolve_selection_trade_date",
+    "stock_display_items",
+    "stock_label",
+    "stock_name_map",
 ]

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 
+from strategy_agent.data_access import stock_display_items
 from strategy_agent.schemas.result_page import ResultPage
 from strategy_agent.services.artifact_manager import artifact_url, build_artifact_name, persist_artifact_content
 from strategy_agent.schemas.tool_contracts import ToolError, ToolResponse
@@ -149,7 +150,7 @@ def _persist_selection_log_json(
         "strategy_name": strategy_name,
         "run_id": run_id,
         "date_range": backtest_result.get("date_range") or {},
-        "selection_log": selection_log,
+        "selection_log": _enrich_selection_log(selection_log),
     }
     try:
         file_path = persist_artifact_content(
@@ -206,9 +207,18 @@ def _selection_snapshots(selection_log: list[dict], limit: int = 6) -> list[dict
                 "target_count": item.get("target_count"),
                 "executed_count": item.get("executed_count"),
                 "symbols": symbols[:20],
+                "display_symbols": stock_display_items(symbols[:20]),
             }
         )
     return snapshots
+
+
+def _enrich_selection_log(selection_log: list[dict]) -> list[dict]:
+    enriched = []
+    for item in selection_log:
+        symbols = [str(symbol) for symbol in item.get("symbols") or []]
+        enriched.append({**item, "display_symbols": stock_display_items(symbols)})
+    return enriched
 
 
 def _trade_snapshots(trade_log: list[dict], limit: int = 20) -> list[dict]:

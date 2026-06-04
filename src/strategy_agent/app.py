@@ -4,7 +4,7 @@ from google.adk import Runner
 from google.adk.apps import App
 from google.adk.artifacts import FileArtifactService
 from google.adk.memory import InMemoryMemoryService
-from google.adk.sessions import InMemorySessionService
+from google.adk.sessions import DatabaseSessionService
 
 from strategy_agent.agents import create_research_orchestrator_agent
 from strategy_agent.config import settings
@@ -13,9 +13,10 @@ from strategy_agent.config import settings
 def build_runner() -> Runner:
     root_agent = create_research_orchestrator_agent()
     app = App(name=settings.project_name, root_agent=root_agent)
+    settings.adk_session_db_path.parent.mkdir(parents=True, exist_ok=True)
     return Runner(
         app=app,
-        session_service=InMemorySessionService(),
+        session_service=DatabaseSessionService(db_url=settings.adk_session_db_url),
         artifact_service=FileArtifactService(settings.adk_artifact_root),
         memory_service=InMemoryMemoryService(),
         auto_create_session=True,

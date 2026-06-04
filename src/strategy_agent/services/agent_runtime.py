@@ -205,6 +205,9 @@ def _record_adapted_event(
     narrator: ProgressNarratorAgent | None,
     queue: ThreadEventQueue | None,
 ) -> None:
+    if _should_emit_before(event, narrator):
+        _record_narration("before_action", event, collector=collector, narrator=narrator, queue=queue)
+
     timeline_start = len(collector.timeline)
     collector.record(event)
     _push_new_timeline(collector.timeline[timeline_start:], queue)
@@ -213,8 +216,12 @@ def _record_adapted_event(
         _record_narration("after_action", event, collector=collector, narrator=narrator, queue=queue)
 
 
+def _should_emit_before(event: AdkStreamEvent, narrator: ProgressNarratorAgent | None) -> bool:
+    return bool(narrator and event.type == "tool_call" and should_narrate(event, phase="before_action"))
+
+
 def _should_emit_after(event: AdkStreamEvent, narrator: ProgressNarratorAgent | None) -> bool:
-    return bool(narrator and event.type in {"tool_result", "message"} and should_narrate(event))
+    return bool(narrator and event.type in {"tool_result", "message"} and should_narrate(event, phase="after_action"))
 
 
 def _record_narration(

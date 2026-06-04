@@ -128,6 +128,8 @@ def test_monthly_amount_rotation_execution_flow_success() -> None:
     snapshots = responses["assemble_result_page"].data["result_page"]["trade_stats"]["selection_snapshots"]
     assert snapshots
     assert snapshots[-1]["symbols"]
+    assert snapshots[-1]["display_symbols"]
+    assert {"symbol", "label"} <= set(snapshots[-1]["display_symbols"][0])
     artifact = responses["assemble_result_page"].data["result_page"]["trade_stats"]["selection_artifact"]
     assert artifact["url"].startswith("/artifacts/test-monthly-amount/")
     assert (settings.artifact_root / "test-monthly-amount" / artifact["artifact_id"]).exists()

@@ -1,7 +1,7 @@
-import { DEFAULT_QUERY, els, setStatus } from "./dom.js?v=52";
-import { renderTraceDashboard } from "./trace_dashboard.js?v=52";
-import { createTracePanel } from "./trace_view.js?v=52";
-import { createTurnResult } from "./turn_result_view.js?v=52";
+import { DEFAULT_QUERY, els, setStatus } from "./dom.js?v=62";
+import { renderTraceDashboard } from "./trace_dashboard.js?v=62";
+import { createTracePanel } from "./trace_view.js?v=62";
+import { createTurnResult } from "./turn_result_view.js?v=62";
 
 let chatTurns = [];
 
@@ -63,7 +63,7 @@ export function setChatTurns(turns) {
 }
 
 function setActiveThread(target) {
-  els.threadItems.forEach((item) => item.classList.remove("active"));
+  document.querySelectorAll(".thread-item").forEach((item) => item.classList.remove("active"));
   if (target) target.classList.add("active");
 }
 

@@ -1,7 +1,7 @@
-import { els, safeText, setBadge, setStatus } from "./dom.js?v=52";
-import { updateLastAgentResult, updateLastAgentTrace, updateLastAgentTurn } from "./chat_view.js?v=52";
-import { mergeLiveTrace, stopTraceLoading, traceItemsFromPayload } from "./trace_view.js?v=52";
-import { renderChart, renderMetrics, renderYearly } from "./result_widgets.js?v=52";
+import { els, safeText, setBadge, setStatus } from "./dom.js?v=62";
+import { updateLastAgentResult, updateLastAgentTrace, updateLastAgentTurn } from "./chat_view.js?v=62";
+import { mergeLiveTrace, stopTraceLoading, traceItemsFromPayload } from "./trace_view.js?v=62";
+import { renderChart, renderMetrics, renderYearly } from "./result_widgets.js?v=62";
 
 export function resetHomeView(statusText = "输入问题后点击箭头发送") {
   hideClarifyPanel();

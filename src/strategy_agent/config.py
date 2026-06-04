@@ -33,6 +33,14 @@ class Settings:
     derived_root: Path = DATA_ROOT / "derived"
     artifact_root: Path = DATA_ROOT / "artifacts"
     adk_artifact_root: Path = DATA_ROOT / "adk_artifacts"
+    adk_session_db_path: Path = DATA_ROOT / "adk_sessions" / "strategy_agent.sqlite"
+
+    @property
+    def adk_session_db_url(self) -> str:
+        configured = os.getenv("ADK_SESSION_DB_URL")
+        if configured:
+            return configured
+        return f"sqlite+aiosqlite:///{self.adk_session_db_path}"
 
     @property
     def fund_daily_dir(self) -> Path:

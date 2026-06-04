@@ -64,10 +64,17 @@ function selectionPanel(tradeStats) {
   for (const item of items.slice().reverse()) {
     const row = div("selection-row");
     row.append(textBlock(formatDate(item.trade_date), "selection-date"));
-    row.append(chips((item.symbols || []).slice(0, 20)));
+    row.append(chips(selectionLabels(item).slice(0, 20)));
     root.append(row);
   }
   return root;
+}
+
+function selectionLabels(item) {
+  if (Array.isArray(item?.display_symbols) && item.display_symbols.length) {
+    return item.display_symbols.map((entry) => entry?.label || entry?.name || entry?.symbol).filter(Boolean);
+  }
+  return item?.symbols || [];
 }
 
 function tradesPanel(tradeStats) {

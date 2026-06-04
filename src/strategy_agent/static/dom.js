@@ -3,7 +3,6 @@ export const DEFAULT_QUERY = "对于沪深300ETF，MACD 日线金叉买入、死
 export const els = {
   queryInput: document.getElementById("queryInput"),
   runBtn: document.getElementById("runBtn"),
-  exampleBtn: document.getElementById("exampleBtn"),
   clearChatBtn: document.getElementById("clearChatBtn"),
   chatTabBtn: document.getElementById("chatTabBtn"),
   traceTabBtn: document.getElementById("traceTabBtn"),
@@ -11,6 +10,7 @@ export const els = {
   resultBadge: document.getElementById("resultBadge"),
   chatStrip: document.getElementById("chatStrip"),
   chatTimeline: document.getElementById("chatTimeline"),
+  threadList: document.querySelector(".thread-list"),
   traceBoard: document.getElementById("traceBoard"),
   traceStats: document.getElementById("traceStats"),
   traceTurns: document.getElementById("traceTurns"),
@@ -29,7 +29,6 @@ export const els = {
   yearlyTableBody: document.querySelector("#yearlyTable tbody"),
   yearlyWrap: document.getElementById("yearlyWrap"),
   riskBox: document.getElementById("riskBox"),
-  threadItems: document.querySelectorAll(".thread-item"),
 };
 
 export function setStatus(text) {

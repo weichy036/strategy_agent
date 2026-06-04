@@ -1,4 +1,4 @@
-import { els, setStatus } from "./dom.js?v=52";
+import { els, setStatus } from "./dom.js?v=62";
 
 let traceTimer = null;
 let liveTraceItems = [];
@@ -82,7 +82,7 @@ export function createTracePanel(items, completed = false) {
   summary.textContent = processTitle(items || [], completed);
   const list = document.createElement("div");
   list.className = "process-list";
-  for (const item of processItems(items || [])) {
+  for (const item of processItems(items || [], completed)) {
     list.appendChild(createProcessRow(item));
   }
   wrap.append(summary, list);
@@ -187,23 +187,77 @@ function processTitle(items, completed = false) {
   return elapsed ? `已处理 ${elapsed}` : "已处理";
 }
 
-function processItems(items) {
-  const seen = new Set();
-  return items
+function processItems(items, completed = false) {
+  return compactProcessItems(items
     .filter((item) => {
       const type = item.event_type || "";
-      if (type === "narration" || type === "agent_output_parsed" || type === "adk_error") return true;
+      if (type === "narration" || type === "adk_error") return true;
+      if (type === "agent_output_parsed") return true;
       if (type !== "tool_start" && type !== "tool_done") return false;
       return isUserFacingTool(item.stage || item.name || item.actor || "");
     })
-    .filter((item) => {
-      if ((item.event_type || "") === "narration") return true;
-      const key = [item.event_type || "", item.stage || item.name || item.actor || "", item.status || item.state || ""].join("|");
-      if (seen.has(key)) return false;
-      seen.add(key);
-      return true;
-    })
-    .slice(0, 28);
+  )
+    .slice(-(completed ? 18 : 28));
+}
+
+function compactProcessItems(items) {
+  const compacted = [];
+  let segment = [];
+  for (const item of items) {
+    if ((item.event_type || "") === "narration") {
+      flushProcessSegment(compacted, segment);
+      segment = [];
+      compacted.push(item);
+      continue;
+    }
+    segment.push(item);
+  }
+  flushProcessSegment(compacted, segment);
+  return compacted;
+}
+
+function flushProcessSegment(target, segment) {
+  if (!segment.length) return;
+  target.push(processSegmentSummary(segment));
+}
+
+function processSegmentSummary(segment) {
+  const error = [...segment].reverse().find((item) => item.status === "error" || item.state === "error");
+  if (error) {
+    return {
+      event_type: "process_summary",
+      status: "error",
+      state: "error",
+      label: "error",
+      message: error.message || `${displayTraceName(eventName(error))} 执行异常`,
+    };
+  }
+
+  const running = [...segment].reverse().find((item) => item.status === "running" || item.state === "running");
+  if (running) {
+    return {
+      event_type: "process_summary",
+      status: "running",
+      state: "running",
+      label: "running",
+      message: processEventText(running),
+    };
+  }
+
+  const latestByName = new Map();
+  for (const item of segment) {
+    latestByName.set(eventName(item), item);
+  }
+  const names = [...latestByName.values()].map((item) => displayTraceName(eventName(item))).filter(Boolean);
+  const visibleNames = names.slice(0, 3).join(" / ");
+  const suffix = names.length > 3 ? ` 等 ${names.length} 项` : "";
+  return {
+    event_type: "process_summary",
+    status: "success",
+    state: "success",
+    label: "success",
+    message: `已完成 ${visibleNames}${suffix}`,
+  };
 }
 
 function isUserFacingTool(name) {
@@ -239,12 +293,17 @@ function createProcessRow(item) {
 
 function processEventText(item) {
   const type = item.event_type || "";
-  const name = displayTraceName(item.stage || item.name || item.actor || "Agent");
+  if (type === "process_summary") return item.message || "";
+  const name = displayTraceName(eventName(item));
   if (type === "tool_start") return `正在调用 ${name}`;
   if (type === "tool_done") return `已完成 ${name}`;
   if (type === "agent_output_parsed") return `已完成 ${name}`;
   if (type === "adk_error") return item.message || "执行异常";
   return item.message || name;
+}
+
+function eventName(item) {
+  return item.stage || item.name || item.actor || "Agent";
 }
 
 function elapsedText(items) {
