@@ -9,12 +9,14 @@ from .execution import create_strategy_execution_agent
 from .intent_classifier import create_intent_classifier_agent
 from .result_explanation import create_result_explanation_agent
 from .strategy_designer import create_strategy_designer_agent
+from .workflow_routing import route_after_clarification
 
 
 def create_research_orchestrator_agent() -> Workflow:
     context = create_conversation_context_agent()
     intent = create_intent_classifier_agent()
     clarification = create_clarification_agent()
+    route = route_after_clarification
     designer = create_strategy_designer_agent()
     data_research = create_data_research_agent()
     execution = create_strategy_execution_agent()
@@ -23,5 +25,18 @@ def create_research_orchestrator_agent() -> Workflow:
     return Workflow(
         name="ResearchOrchestratorAgent",
         description="按顺序编排量化研究工作流的总控 Agent。",
-        edges=[(START, context, intent, clarification, designer, data_research, execution, explanation)],
+        edges=[
+            (
+                START,
+                context,
+                intent,
+                clarification,
+                route,
+                {
+                    "answer": explanation,
+                    "backtest": designer,
+                },
+            ),
+            (designer, data_research, execution, explanation),
+        ],
     )

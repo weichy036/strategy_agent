@@ -3,6 +3,8 @@ from __future__ import annotations
 from types import SimpleNamespace
 
 from strategy_agent.agents.context_prompt import conversation_context_instruction
+from strategy_agent.agents.result_explanation import _instruction as result_explanation_instruction
+from strategy_agent.agents.workflow_routing import choose_backtest_route, route_after_clarification
 from strategy_agent.services.result_collector import StrategyRunResultCollector
 from strategy_agent.services.runtime_models import AdkStreamEvent
 from strategy_agent.services.state_keys import AgentStateKeys
@@ -87,3 +89,72 @@ def test_context_instruction_includes_previous_strategy_schema() -> None:
     assert "上一轮/当前有效策略 schema" in text
     assert "monthly_return" in text
     assert '"top_n": 20' in text
+
+
+def test_general_chat_routes_directly_to_answer() -> None:
+    route = choose_backtest_route(
+        intent={
+            "intent_type": "general_chat",
+            "is_backtest_request": False,
+            "is_backtestable_now": False,
+        },
+        clarification={"needs_clarification": False},
+    )
+
+    assert route == "answer"
+
+
+def test_backtest_request_routes_to_backtest_chain() -> None:
+    route = choose_backtest_route(
+        intent={
+            "intent_type": "cross_sectional_backtest",
+            "is_backtest_request": True,
+            "is_backtestable_now": True,
+        },
+        clarification={"needs_clarification": False},
+    )
+
+    assert route == "backtest"
+
+
+def test_route_node_reads_json_string_state_written_by_llm_agents() -> None:
+    ctx = SimpleNamespace(
+        state={
+            AgentStateKeys.INTENT_CLASSIFICATION: (
+                '{"intent_type":"single_instrument_backtest","confidence":0.95,'
+                '"is_backtest_request":true,"is_backtestable_now":true,'
+                '"missing_fields":[],"inferred_fields":{},"reason":"可以回测"}'
+            ),
+            AgentStateKeys.CLARIFICATION_RESULT: (
+                '{"needs_clarification":false,"next_question":null,'
+                '"must_ask_fields":[],"defaultable_fields":[],"resolved_fields":{},'
+                '"rationale":"信息完整"}'
+            ),
+        }
+    )
+
+    event = route_after_clarification._func(ctx)  # noqa: SLF001
+
+    assert event.actions.route == "backtest"
+    assert ctx.state["workflow.route"] == "backtest"
+
+
+def test_result_explanation_instruction_does_not_force_backtest_for_chat() -> None:
+    ctx = SimpleNamespace(
+        state={
+            AgentStateKeys.CONVERSATION_CONTEXT: {
+                "turn_type": "general_chat",
+                "confidence": 0.9,
+                "should_inherit_previous_strategy": False,
+                "rewritten_query": "用户打招呼。",
+                "patch_hints": {},
+                "rationale": "问候语。",
+            }
+        }
+    )
+
+    text = result_explanation_instruction(ctx)  # type: ignore[arg-type]
+
+    assert "intent.is_backtest_request=false" in text
+    assert "不要解释回测结果" in text
+    assert "不要描述收益曲线" in text

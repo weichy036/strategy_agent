@@ -3,6 +3,8 @@ from __future__ import annotations
 from types import SimpleNamespace
 
 from strategy_agent.services.progress_narrator import ProgressNarratorAgent, should_narrate
+from strategy_agent.services.agent_runtime import _is_duplicate_narration, _should_skip_narration
+from strategy_agent.services.result_collector import StrategyRunResultCollector
 from strategy_agent.services.runtime_models import AdkStreamEvent
 
 
@@ -86,3 +88,44 @@ def test_should_narrate_runtime_actions() -> None:
     assert not should_narrate(AdkStreamEvent(type="message", author="ResultExplanationAgent", payload={}))
     assert not should_narrate(AdkStreamEvent(type="tool_call", author="agent", payload={"name": "load_skill"}))
     assert not should_narrate(AdkStreamEvent(type="usage", author="StrategyDesignerAgent", payload={}))
+
+
+def test_runtime_skips_progress_narration_for_general_chat() -> None:
+    collector = StrategyRunResultCollector()
+    collector.result_data["intent"] = {
+        "intent_type": "general_chat",
+        "is_backtest_request": False,
+    }
+
+    assert _should_skip_narration(
+        AdkStreamEvent(type="message", author="ClarificationAgent", payload={}),
+        collector,
+    )
+
+
+def test_runtime_skips_duplicate_progress_narration() -> None:
+    timeline = [
+        {
+            "event_type": "narration",
+            "message": "我先确认了你的交易条件——阳光电源、日线、MACD金叉买入、死叉卖出，这些关键信息已经足够完整，可以继续整理策略方案了。",
+        }
+    ]
+
+    assert _is_duplicate_narration(
+        "我先确认了你的交易条件——阳光电源、日线、MACD金叉买入、死叉卖出，这些关键信息已经足够完整，可以继续整理策略方案了。",
+        timeline,
+    )
+
+
+def test_runtime_keeps_distinct_progress_narration() -> None:
+    timeline = [
+        {
+            "event_type": "narration",
+            "message": "我先确认了你的交易条件——阳光电源、日线、MACD金叉买入、死叉卖出，这些关键信息已经足够完整，可以继续整理策略方案了。",
+        }
+    ]
+
+    assert not _is_duplicate_narration(
+        "回测引擎已经跑完，生成了2524个净值点和185笔交易记录，接下来可以计算关键收益指标。",
+        timeline,
+    )

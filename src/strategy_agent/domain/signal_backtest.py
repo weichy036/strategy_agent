@@ -119,16 +119,84 @@ def _apply_signal_rule(df: pd.DataFrame, rule: SignalRule) -> pd.Series:
         if rule.operator == "bearish_cross":
             return df["macd_bearish_cross"].fillna(False)
 
+    if rule.kind == "indicator_event" and rule.indicator == "ma_cross":
+        params = rule.params or {}
+        fast = int(params.get("fast", 0))
+        slow = int(params.get("slow", 0))
+        left = _ma_series(df, fast)
+        right = _ma_series(df, slow)
+        if rule.operator == "bullish_cross":
+            return _cross_above(left, right)
+        if rule.operator == "bearish_cross":
+            return _cross_below(left, right)
+
     if rule.kind == "comparison_rule":
-        field = rule.indicator or rule.params.get("field") if rule.params else None
-        if field and field in df.columns:
+        if rule.operator in {"cross_above", "cross_below"}:
+            left = _indicator_series(df, rule.indicator, rule.params)
+            right = _comparison_value_series(df, rule.value)
+            if left is None or right is None:
+                return pd.Series(False, index=df.index)
+            return _cross_above(left, right) if rule.operator == "cross_above" else _cross_below(left, right)
+
+        field = rule.indicator or (rule.params or {}).get("field")
+        series = _indicator_series(df, field, rule.params) if field else None
+        if series is not None and isinstance(rule.value, (int, float)):
             if rule.operator == "gt":
-                return df[field] > rule.value
+                return series > float(rule.value)
             if rule.operator == "lt":
-                return df[field] < rule.value
+                return series < float(rule.value)
             if rule.operator == "eq":
-                return df[field] == rule.value
+                return series == float(rule.value)
     return pd.Series(False, index=df.index)
+
+
+def _ma_series(df: pd.DataFrame, period: int) -> pd.Series:
+    if period <= 0:
+        return pd.Series(float("nan"), index=df.index)
+    column = f"ma_{period}"
+    if column not in df.columns:
+        df[column] = df["close"].astype(float).rolling(window=period, min_periods=period).mean()
+    return df[column]
+
+
+def _indicator_series(df: pd.DataFrame, indicator: str | None, params: dict[str, Any]) -> pd.Series | None:
+    if indicator == "ma":
+        return _ma_series(df, int((params or {}).get("period", 0)))
+    if indicator == "rsi":
+        return _rsi_series(df, int((params or {}).get("period", 14)))
+    if indicator and indicator in df.columns:
+        return df[indicator]
+    return None
+
+
+def _rsi_series(df: pd.DataFrame, period: int) -> pd.Series:
+    if period <= 0:
+        return pd.Series(float("nan"), index=df.index)
+    column = f"rsi_{period}"
+    if column not in df.columns:
+        close = df["close"].astype(float)
+        delta = close.diff()
+        gain = delta.clip(lower=0).ewm(alpha=1 / period, adjust=False, min_periods=period).mean()
+        loss = (-delta.clip(upper=0)).ewm(alpha=1 / period, adjust=False, min_periods=period).mean()
+        rs = gain / loss.replace(0, pd.NA)
+        df[column] = (100 - 100 / (1 + rs)).fillna(50.0)
+    return df[column]
+
+
+def _comparison_value_series(df: pd.DataFrame, value: Any) -> pd.Series | None:
+    if isinstance(value, dict):
+        return _indicator_series(df, value.get("indicator"), value.get("params") or {})
+    if isinstance(value, (int, float)):
+        return pd.Series(float(value), index=df.index)
+    return None
+
+
+def _cross_above(left: pd.Series, right: pd.Series) -> pd.Series:
+    return ((left > right) & (left.shift(1) <= right.shift(1))).fillna(False)
+
+
+def _cross_below(left: pd.Series, right: pd.Series) -> pd.Series:
+    return ((left < right) & (left.shift(1) >= right.shift(1))).fillna(False)
 
 
 def _combine_rules(df: pd.DataFrame, rules: list[SignalRule]) -> pd.Series:

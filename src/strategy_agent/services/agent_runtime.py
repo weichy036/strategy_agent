@@ -4,6 +4,7 @@ import asyncio
 from collections.abc import AsyncIterator
 from dataclasses import asdict
 from queue import Empty, Queue
+import re
 from threading import Lock, Thread
 import time
 from typing import Any
@@ -246,6 +247,8 @@ def _record_narration(
     text = narrator.narrate(phase=phase, event=source, recent_timeline=collector.timeline)
     if not text:
         return
+    if _is_duplicate_narration(text, collector.timeline):
+        return
     event = AdkStreamEvent(
         type="state_trace",
         author="ProgressNarratorAgent",
@@ -268,6 +271,10 @@ def _push_new_timeline(items: list[dict], queue: ThreadEventQueue | None) -> Non
 
 
 def _should_skip_narration(source: AdkStreamEvent, collector: StrategyRunResultCollector) -> bool:
+    intent = collector.result_data.get("intent")
+    if isinstance(intent, dict) and intent.get("is_backtest_request") is False:
+        return True
+
     clarification = collector.result_data.get("clarification")
     if isinstance(clarification, dict) and clarification.get("needs_clarification"):
         return source.author not in {"ClarificationAgent", "ProgressNarratorAgent"}
@@ -283,3 +290,34 @@ def _source_stage(event: AdkStreamEvent) -> str:
 
 def _narration_count(timeline: list[dict]) -> int:
     return sum(1 for item in timeline if item.get("event_type") == "narration")
+
+
+def _is_duplicate_narration(text: str, timeline: list[dict], *, lookback: int = 4) -> bool:
+    current = _normalize_narration(text)
+    if not current:
+        return True
+    recent = [
+        _normalize_narration(str(item.get("message") or ""))
+        for item in timeline
+        if item.get("event_type") == "narration"
+    ][-lookback:]
+    return any(_is_similar_text(current, item) for item in recent if item)
+
+
+def _normalize_narration(text: str) -> str:
+    text = re.sub(r"[，。、“”‘’：:；;！!？?\s—…,.()（）-]+", "", text)
+    return text.strip()
+
+
+def _is_similar_text(left: str, right: str) -> bool:
+    if left == right:
+        return True
+    shorter, longer = sorted((left, right), key=len)
+    if len(shorter) < 16:
+        return False
+    if shorter in longer:
+        return True
+    left_chars = set(left)
+    right_chars = set(right)
+    overlap = len(left_chars & right_chars) / max(len(left_chars | right_chars), 1)
+    return overlap >= 0.92

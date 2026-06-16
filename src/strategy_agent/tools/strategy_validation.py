@@ -71,9 +71,34 @@ def _is_supported_signal_rule(rule, side: str) -> bool:
     if rule.kind == "indicator_event" and rule.indicator == "macd":
         expected = "bullish_cross" if side == "buy" else "bearish_cross"
         return rule.operator == expected
+    if rule.kind == "indicator_event" and rule.indicator == "ma_cross":
+        expected = "bullish_cross" if side == "buy" else "bearish_cross"
+        return rule.operator == expected and _valid_ma_pair(rule.params)
+    if rule.kind == "comparison_rule" and rule.indicator == "ma":
+        expected = "cross_above" if side == "buy" else "cross_below"
+        return rule.operator == expected and _valid_ma_comparison(rule)
     if rule.kind == "comparison_rule":
         return rule.operator in {"gt", "lt", "eq"} and bool(rule.indicator)
     return False
+
+
+def _valid_ma_pair(params: dict) -> bool:
+    try:
+        fast = int(params.get("fast", 0))
+        slow = int(params.get("slow", 0))
+    except (TypeError, ValueError):
+        return False
+    return fast > 0 and slow > 0 and fast != slow
+
+
+def _valid_ma_comparison(rule) -> bool:
+    value = rule.value if isinstance(rule.value, dict) else {}
+    try:
+        left = int((rule.params or {}).get("period", 0))
+        right = int((value.get("params") or {}).get("period", 0))
+    except (TypeError, ValueError):
+        return False
+    return value.get("indicator") == "ma" and left > 0 and right > 0 and left != right
 
 
 _SUPPORTED_RANKING_FIELDS = supported_ranking_fields()

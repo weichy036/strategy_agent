@@ -146,11 +146,19 @@ def test_orchestrator_uses_adk_workflow_chain():
         ("__START__", "ConversationContextAgent"),
         ("ConversationContextAgent", "IntentClassifierAgent"),
         ("IntentClassifierAgent", "ClarificationAgent"),
-        ("ClarificationAgent", "StrategyDesignerAgent"),
+        ("ClarificationAgent", "BacktestRouteNode"),
+        ("BacktestRouteNode", "ResultExplanationAgent"),
+        ("BacktestRouteNode", "StrategyDesignerAgent"),
         ("StrategyDesignerAgent", "DataResearchAgent"),
         ("DataResearchAgent", "StrategyExecutionAgent"),
         ("StrategyExecutionAgent", "ResultExplanationAgent"),
     ]
+    routes = {
+        (edge.from_node.name, edge.to_node.name): edge.route
+        for edge in orchestrator.graph.edges
+    }
+    assert routes[("BacktestRouteNode", "ResultExplanationAgent")] == "answer"
+    assert routes[("BacktestRouteNode", "StrategyDesignerAgent")] == "backtest"
 
 
 def test_response_slimmer_keeps_artifacts_without_large_series():

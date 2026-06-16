@@ -96,6 +96,79 @@ def test_execution_flow_stops_on_invalid_signal_contract() -> None:
     assert validation["invalid_fields"] == ["signals.buy[0]"]
 
 
+def test_ma_cross_execution_flow_success() -> None:
+    schema = macd_510300_schema()
+    schema["name"] = "沪深300ETF MA10/MA60"
+    schema["signals"] = {
+        "buy": [
+            {
+                "kind": "comparison_rule",
+                "indicator": "ma",
+                "params": {"period": 10},
+                "operator": "cross_above",
+                "value": {"indicator": "ma", "params": {"period": 60}},
+            }
+        ],
+        "sell": [
+            {
+                "kind": "comparison_rule",
+                "indicator": "ma",
+                "params": {"period": 10},
+                "operator": "cross_below",
+                "value": {"indicator": "ma", "params": {"period": 60}},
+            }
+        ],
+    }
+
+    results = [(step.name, step.run()) for step in strategy_execution_steps(schema, session_id="test-ma-cross")]
+
+    assert [name for name, _ in results] == [
+        "validate_strategy_schema",
+        "query_market_data",
+        "run_backtest",
+        "compute_metrics",
+        "assemble_result_page",
+    ]
+    assert all(response.ok for _, response in results)
+    backtest = dict(results)["run_backtest"].data
+    assert len(backtest["equity_curve"]) > 100
+    assert backtest["summary"]["trade_count"] > 0
+
+
+def test_rsi_threshold_backtest_produces_trades() -> None:
+    schema = macd_510300_schema()
+    schema["name"] = "创业板ETF RSI"
+    schema["universe"] = {"type": "instrument", "symbols": ["159915.SZ"]}
+    schema["period"] = {"frequency": "1d", "start": None, "end": "latest"}
+    schema["signals"] = {
+        "buy": [
+            {
+                "kind": "comparison_rule",
+                "indicator": "rsi",
+                "params": {"period": 14},
+                "operator": "lt",
+                "value": 30,
+            }
+        ],
+        "sell": [
+            {
+                "kind": "comparison_rule",
+                "indicator": "rsi",
+                "params": {"period": 14},
+                "operator": "gt",
+                "value": 70,
+            }
+        ],
+    }
+
+    results = [(step.name, step.run()) for step in strategy_execution_steps(schema, session_id="test-rsi-threshold")]
+
+    assert all(response.ok for _, response in results)
+    backtest = dict(results)["run_backtest"].data
+    assert backtest["summary"]["trade_count"] > 0
+    assert backtest["summary"]["total_return"] != 0
+
+
 def test_monthly_amount_rotation_execution_flow_success() -> None:
     schema = {
         "schema_version": "v1",
@@ -265,6 +338,8 @@ def test_display_strategy_name_fallbacks_are_readable() -> None:
 if __name__ == "__main__":
     test_macd_execution_flow_success()
     test_execution_flow_stops_on_invalid_signal_contract()
+    test_ma_cross_execution_flow_success()
+    test_rsi_threshold_backtest_produces_trades()
     test_monthly_amount_rotation_execution_flow_success()
     test_previous_month_return_rotation_execution_flow_success()
     test_display_strategy_name_fallbacks_are_readable()

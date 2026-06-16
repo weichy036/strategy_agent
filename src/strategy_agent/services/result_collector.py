@@ -308,6 +308,10 @@ def _clarification_from_validation(validation: dict[str, Any], assistant_message
 
 def _question_for_fields(fields: list[str]) -> str:
     field = fields[0] if fields else ""
+    if field.startswith("signals.buy"):
+        return "我还需要确认买入规则：满足什么条件时买入？"
+    if field.startswith("signals.sell"):
+        return "我还需要确认卖出规则：满足什么条件时卖出？"
     questions = {
         "universe.symbols": "我还需要确认回测标的：你想回测哪只股票、ETF 或指数？",
         "signals.buy": "我还需要确认买入规则：满足什么条件时买入？",
