@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import hashlib
+import json
 import logging
 
 from strategy_agent.data_access import stock_display_items
@@ -72,12 +74,20 @@ def _persist_equity_curve_svg(
         return None
     run_id = str(backtest_result.get("run_id") or "")
     strategy_id = str(strategy_schema.get("strategy_id") or strategy_schema.get("name") or strategy_name or "strategy")
-    name = build_artifact_name("equity_curve", session_id, strategy_id=_safe_part(strategy_id), run_id=_safe_part(run_id), ext="svg")
+    svg = _equity_curve_svg(equity_curve)
+    name = build_artifact_name(
+        "equity_curve",
+        session_id,
+        strategy_id=_safe_part(strategy_id),
+        run_id=_safe_part(run_id),
+        content_id=_content_fingerprint(svg),
+        ext="svg",
+    )
     try:
         file_path = persist_artifact_content(
             session_id=session_id,
             name=name,
-            content=_equity_curve_svg(equity_curve),
+            content=svg,
             content_type="image/svg+xml",
         )
     except Exception:  # noqa: BLE001 - artifact persistence is an optimization; keep result rendering available.
@@ -106,23 +116,31 @@ def _persist_log_json(
         return None
     run_id = str(backtest_result.get("run_id") or "")
     strategy_id = str(strategy_schema.get("strategy_id") or strategy_schema.get("name") or strategy_name or "strategy")
-    name = build_artifact_name(log_name, session_id, strategy_id=_safe_part(strategy_id), run_id=_safe_part(run_id), ext="json")
     payload = {
         "strategy_name": strategy_name,
         "run_id": run_id,
         "date_range": backtest_result.get("date_range") or {},
         log_name: log,
     }
+    artifact_name = build_artifact_name(
+        log_name,
+        session_id,
+        strategy_id=_safe_part(strategy_id),
+        run_id=_safe_part(run_id),
+        content_id=_content_fingerprint(payload),
+        ext="json",
+    )
     try:
         file_path = persist_artifact_content(
             session_id=session_id,
-            name=name,
+            name=artifact_name,
             content=payload,
             content_type="application/json",
         )
     except Exception:  # noqa: BLE001 - artifact persistence is optional for rendering.
-        logger.exception("%s artifact 持久化失败：session_id=%s name=%s", log_name, session_id, name)
+        logger.exception("%s artifact 持久化失败：session_id=%s name=%s", log_name, session_id, artifact_name)
         return None
+    name = file_path.name
     return {
         "artifact_id": name,
         "artifact_type": log_name,
@@ -145,23 +163,31 @@ def _persist_selection_log_json(
         return None
     run_id = str(backtest_result.get("run_id") or "")
     strategy_id = str(strategy_schema.get("strategy_id") or strategy_schema.get("name") or strategy_name or "strategy")
-    name = build_artifact_name("selection_log", session_id, strategy_id=_safe_part(strategy_id), run_id=_safe_part(run_id), ext="json")
     payload = {
         "strategy_name": strategy_name,
         "run_id": run_id,
         "date_range": backtest_result.get("date_range") or {},
         "selection_log": _enrich_selection_log(selection_log),
     }
+    artifact_name = build_artifact_name(
+        "selection_log",
+        session_id,
+        strategy_id=_safe_part(strategy_id),
+        run_id=_safe_part(run_id),
+        content_id=_content_fingerprint(payload),
+        ext="json",
+    )
     try:
         file_path = persist_artifact_content(
             session_id=session_id,
-            name=name,
+            name=artifact_name,
             content=payload,
             content_type="application/json",
         )
     except Exception:  # noqa: BLE001 - artifact persistence is optional for rendering.
-        logger.exception("selection_log artifact 持久化失败：session_id=%s name=%s", session_id, name)
+        logger.exception("selection_log artifact 持久化失败：session_id=%s name=%s", session_id, artifact_name)
         return None
+    name = file_path.name
     return {
         "artifact_id": name,
         "artifact_type": "selection_log",
@@ -195,6 +221,14 @@ def _equity_curve_svg(series: list[dict], width: int = 760, height: int = 250, p
 
 def _safe_part(value: str) -> str:
     return "".join(ch if ch.isalnum() or ch in {"-", "_"} else "_" for ch in value)[:80]
+
+
+def _content_fingerprint(value: object) -> str:
+    if isinstance(value, str):
+        payload = value
+    else:
+        payload = json.dumps(value, ensure_ascii=False, sort_keys=True, default=str)
+    return hashlib.sha1(payload.encode("utf-8")).hexdigest()[:10]
 
 
 def _selection_snapshots(selection_log: list[dict], limit: int = 6) -> list[dict]:

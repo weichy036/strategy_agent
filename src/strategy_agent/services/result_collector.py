@@ -8,6 +8,7 @@ from strategy_agent.services.runtime_models import AdkStreamEvent, AgentTurnResu
 from strategy_agent.services.state_keys import AgentStateKeys
 from strategy_agent.services.structured_outputs import AGENT_OUTPUT_SCHEMAS, parse_agent_output
 AGENT_OUTPUT_DATA_KEYS = {
+    "ConversationContextAgent": "conversation_context",
     "IntentClassifierAgent": "intent",
     "ClarificationAgent": "clarification",
     "StrategyDesignerAgent": "strategy_schema",
@@ -188,6 +189,7 @@ class StrategyRunResultCollector:
             return
 
         mapping = {
+            AgentStateKeys.CONVERSATION_CONTEXT: ("conversation_context", "ConversationContextAgent"),
             AgentStateKeys.INTENT_CLASSIFICATION: ("intent", "IntentClassifierAgent"),
             AgentStateKeys.CLARIFICATION_RESULT: ("clarification", "ClarificationAgent"),
             AgentStateKeys.STRATEGY_SCHEMA_DRAFT: ("strategy_schema", "StrategyDesignerAgent"),

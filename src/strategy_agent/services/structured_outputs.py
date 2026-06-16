@@ -8,6 +8,7 @@ from typing import Any
 from pydantic import BaseModel
 
 from strategy_agent.schemas.agent_outputs import ClarificationOutput
+from strategy_agent.schemas.agent_outputs import ConversationContextOutput
 from strategy_agent.schemas.agent_outputs import IntentClassificationOutput
 from strategy_agent.schemas.agent_outputs import ResultExplanationOutput
 from strategy_agent.schemas.data_research import DataAvailabilityReport
@@ -15,6 +16,7 @@ from strategy_agent.schemas.strategy_schema import StrategySchema
 
 
 AGENT_OUTPUT_SCHEMAS: dict[str, type[BaseModel]] = {
+    "ConversationContextAgent": ConversationContextOutput,
     "IntentClassifierAgent": IntentClassificationOutput,
     "ClarificationAgent": ClarificationOutput,
     "StrategyDesignerAgent": StrategySchema,

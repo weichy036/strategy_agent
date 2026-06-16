@@ -11,6 +11,7 @@ def build_artifact_name(
     session_id: str,
     strategy_id: str | None = None,
     run_id: str | None = None,
+    content_id: str | None = None,
     ext: str = "json",
 ) -> str:
     parts = [artifact_type, session_id]
@@ -18,6 +19,8 @@ def build_artifact_name(
         parts.append(strategy_id)
     if run_id:
         parts.append(run_id)
+    if content_id:
+        parts.append(content_id)
     return "_".join(parts) + f".{ext}"
 
 

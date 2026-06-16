@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 from google.adk import Agent
+from google.adk.agents.readonly_context import ReadonlyContext
 
 from strategy_agent.schemas.agent_outputs import ClarificationOutput
+from .context_prompt import conversation_context_instruction
 from .llm_model import create_llm_model
 from .schema_contracts import json_contract_instruction
 from .schema_contracts import output_schema_kwargs
@@ -13,21 +15,29 @@ def create_clarification_agent() -> Agent:
         name="ClarificationAgent",
         model=create_llm_model(),
         description="用简洁的多轮澄清补齐策略定义中真正缺失的信息。",
-        instruction=(
-            "当策略字段缺失时，只提出简洁、高信息量的澄清问题。"
-            "只询问安全执行回测所必需的最少信息。"
-            "不要询问可以安全使用项目默认值的字段：period.start、period.end、commission、slippage、buy_price、sell_price，以及普通日频执行时点。"
-            "沪深300ETF、中证500ETF、创业板ETF、证券ETF、红利ETF 等常见中文标的名称可以由系统解析为默认代表性代码，不要要求用户再手动提供基金代码。"
-            "对于 MACD、均线、RSI 等单标的日线指标策略，只要买入和卖出规则已经明确，就不要询问成交价格、执行时点、是否允许当日买卖或仓位上限。"
-            "这类策略使用项目默认口径：T 日收盘后确认信号，下一交易日开盘成交；最多持有一笔多头仓位，不加仓、不做空，符合 A 股 T+1 交易规则。"
-            "当用户只说“股票”且没有限定更窄股票池时，默认使用中国 A 股全市场，不要询问使用哪个股票池。"
-            "如果缺失的只是可默认字段，请设置 needs_clarification=false，并把这些字段放入 defaultable_fields。"
-            "只对不可默认字段提问，例如目标标的、买入规则、卖出规则、选股排序规则、持仓数量、持有周期或调仓规则。"
-            "每轮最多只问一个面向用户的问题。"
-            "一旦信息足够，就停止追问并进入执行。"
-            "如果确实需要澄清，next_question 必须是中文用户问题。"
-            f"{json_contract_instruction(ClarificationOutput)}"
-        ),
+        instruction=_instruction,
         output_key="clarification_result",
         **output_schema_kwargs(ClarificationOutput),
+    )
+
+
+def _instruction(ctx: ReadonlyContext) -> str:
+    return (
+        "当策略字段缺失时，只提出简洁、高信息量的澄清问题。"
+        "如果本轮上下文解析显示 rewritten_query，请优先基于 rewritten_query 判断是否还缺信息。"
+        "如果本轮是 strategy_revision，且上一轮有效策略已经包含排序因子、股票池、买卖规则、持有周期或调仓规则，"
+        "这些字段应视为已继承，除非用户本轮明确否定或替换它们。"
+        "只询问安全执行回测所必需的最少信息。"
+        "不要询问可以安全使用项目默认值的字段：period.start、period.end、commission、slippage、buy_price、sell_price，以及普通日频执行时点。"
+        "沪深300ETF、中证500ETF、创业板ETF、证券ETF、红利ETF 等常见中文标的名称可以由系统解析为默认代表性代码，不要要求用户再手动提供基金代码。"
+        "对于 MACD、均线、RSI 等单标的日线指标策略，只要买入和卖出规则已经明确，就不要询问成交价格、执行时点、是否允许当日买卖或仓位上限。"
+        "这类策略使用项目默认口径：T 日收盘后确认信号，下一交易日开盘成交；最多持有一笔多头仓位，不加仓、不做空，符合 A 股 T+1 交易规则。"
+        "当用户只说“股票”且没有限定更窄股票池时，默认使用中国 A 股全市场，不要询问使用哪个股票池。"
+        "如果缺失的只是可默认字段，请设置 needs_clarification=false，并把这些字段放入 defaultable_fields。"
+        "只对不可默认字段提问，例如目标标的、买入规则、卖出规则、选股排序规则、持仓数量、持有周期或调仓规则。"
+        "每轮最多只问一个面向用户的问题。"
+        "一旦信息足够，就停止追问并进入执行。"
+        "如果确实需要澄清，next_question 必须是中文用户问题。"
+        f"\n\n{conversation_context_instruction(ctx)}"
+        f"\n\n{json_contract_instruction(ClarificationOutput)}"
     )

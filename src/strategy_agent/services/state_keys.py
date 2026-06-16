@@ -6,6 +6,7 @@ class AgentStateKeys:
     SESSION_ID = "session_id"
     RUN_ID = "run_id"
 
+    CONVERSATION_CONTEXT = "conversation.context"
     INTENT_CLASSIFICATION = "intent_classification"
     CLARIFICATION_RESULT = "clarification_result"
     RESULT_EXPLANATION = "result_explanation"

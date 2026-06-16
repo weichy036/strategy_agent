@@ -9,6 +9,7 @@ AdkStreamEventType = Literal[
     "tool_call",
     "tool_result",
     "state_trace",
+    "state_delta",
     "usage",
     "error",
     "raw",

@@ -143,7 +143,8 @@ def test_orchestrator_uses_adk_workflow_chain():
 
     assert isinstance(orchestrator, Workflow)
     assert [(edge.from_node.name, edge.to_node.name) for edge in orchestrator.graph.edges] == [
-        ("__START__", "IntentClassifierAgent"),
+        ("__START__", "ConversationContextAgent"),
+        ("ConversationContextAgent", "IntentClassifierAgent"),
         ("IntentClassifierAgent", "ClarificationAgent"),
         ("ClarificationAgent", "StrategyDesignerAgent"),
         ("StrategyDesignerAgent", "DataResearchAgent"),

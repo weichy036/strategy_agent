@@ -6,7 +6,7 @@ from strategy_agent.config import settings
 from strategy_agent.domain.signal_backtest import run_signal_backtest
 from strategy_agent.services.execution_flow import strategy_execution_steps
 from strategy_agent.schemas.strategy_schema import StrategySchema
-from strategy_agent.tools.report_assembly import display_strategy_name
+from strategy_agent.tools.report_assembly import assemble_result_page, display_strategy_name
 
 
 def macd_510300_schema() -> dict:
@@ -202,6 +202,53 @@ def test_previous_month_return_rotation_execution_flow_success() -> None:
     assert dict(results)["run_backtest"].data["summary"]["trade_count"] > 0
     result_page = dict(results)["assemble_result_page"].data["result_page"]
     assert result_page["summary"]["strategy_name"] == "上月涨幅 TOP5 月度轮动策略"
+
+
+def test_report_artifact_url_changes_when_equity_curve_changes() -> None:
+    session_id = "test-artifact-fingerprint"
+    shutil.rmtree(settings.artifact_root / session_id, ignore_errors=True)
+    schema = {
+        "name": "上月涨幅 TOP10 月度轮动策略",
+        "strategy_type": "cross_sectional_rotation",
+        "selection": {"ranking": {"sort_by": "monthly_return", "top_n": 10}},
+    }
+    metrics = {"return_metrics": {}, "risk_metrics": {}, "trading_metrics": {}}
+    explanations = {"summary_text": "回测完成。"}
+
+    first = assemble_result_page(
+        schema,
+        {
+            "run_id": "bt_rotation_same",
+            "equity_curve": [{"trade_date": "20240101", "nav": 1.0}, {"trade_date": "20240102", "nav": 1.2}],
+            "drawdown_curve": [],
+            "trade_log": [],
+            "selection_log": [],
+        },
+        metrics,
+        explanations,
+        session_id=session_id,
+    )
+    second = assemble_result_page(
+        schema,
+        {
+            "run_id": "bt_rotation_same",
+            "equity_curve": [{"trade_date": "20240101", "nav": 1.0}, {"trade_date": "20240102", "nav": 0.8}],
+            "drawdown_curve": [],
+            "trade_log": [],
+            "selection_log": [],
+        },
+        metrics,
+        explanations,
+        session_id=session_id,
+    )
+
+    first_artifact = first.data["result_page"]["equity_curve"]["artifact"]
+    second_artifact = second.data["result_page"]["equity_curve"]["artifact"]
+    assert first_artifact["url"] != second_artifact["url"]
+    assert (settings.artifact_root / session_id / first_artifact["artifact_id"]).exists()
+    assert (settings.artifact_root / session_id / second_artifact["artifact_id"]).exists()
+
+    shutil.rmtree(settings.artifact_root / session_id, ignore_errors=True)
 
 
 def test_display_strategy_name_fallbacks_are_readable() -> None:
