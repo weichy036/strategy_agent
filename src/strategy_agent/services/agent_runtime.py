@@ -18,6 +18,7 @@ from strategy_agent.services.progress_narrator import ProgressNarratorAgent, sho
 from strategy_agent.services.response_slimmer import slim_turn_result
 from strategy_agent.services.result_collector import StrategyRunResultCollector, timeline_entry
 from strategy_agent.services.runtime_models import AdkStreamEvent, AgentTurnResult
+from strategy_agent.services.session_transcript import append_transcript_turn
 
 
 def _to_user_content(message: str) -> types.Content:
@@ -128,7 +129,9 @@ class AgentResearchRuntime:
                 raise RuntimeError(
                     "No agent events received. Please check model connectivity and provider configuration."
                 )
-            queue.put_nowait({"type": "final", "result": asdict(slim_turn_result(collector.build()))})
+            result = slim_turn_result(collector.build())
+            append_transcript_turn(user_id=user_id, session_id=session_id, query=message, result=result)
+            queue.put_nowait({"type": "final", "result": asdict(result)})
         except Exception as exc:  # noqa: BLE001
             queue.put_nowait(
                 {
@@ -161,7 +164,9 @@ class AgentResearchRuntime:
                     narrator=self.narrator,
                     queue=None,
                 )
-        return slim_turn_result(collector.build())
+        result = slim_turn_result(collector.build())
+        append_transcript_turn(user_id=user_id, session_id=session_id, query=message, result=result)
+        return result
 
 
 _runtime: AgentResearchRuntime | None = None

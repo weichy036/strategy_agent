@@ -222,7 +222,13 @@ function flushProcessSegment(target, segment) {
 }
 
 function processSegmentSummary(segment) {
-  const error = [...segment].reverse().find((item) => item.status === "error" || item.state === "error");
+  const latestByName = new Map();
+  for (const item of segment) {
+    latestByName.set(eventName(item), item);
+  }
+  const latestItems = [...latestByName.values()];
+
+  const error = [...latestItems].reverse().find((item) => item.status === "error" || item.state === "error");
   if (error) {
     return {
       event_type: "process_summary",
@@ -233,7 +239,7 @@ function processSegmentSummary(segment) {
     };
   }
 
-  const running = [...segment].reverse().find((item) => item.status === "running" || item.state === "running");
+  const running = [...latestItems].reverse().find((item) => item.status === "running" || item.state === "running");
   if (running) {
     return {
       event_type: "process_summary",
@@ -244,11 +250,7 @@ function processSegmentSummary(segment) {
     };
   }
 
-  const latestByName = new Map();
-  for (const item of segment) {
-    latestByName.set(eventName(item), item);
-  }
-  const names = [...latestByName.values()].map((item) => displayTraceName(eventName(item))).filter(Boolean);
+  const names = latestItems.map((item) => displayTraceName(eventName(item))).filter(Boolean);
   const visibleNames = names.slice(0, 3).join(" / ");
   const suffix = names.length > 3 ? ` 等 ${names.length} 项` : "";
   return {

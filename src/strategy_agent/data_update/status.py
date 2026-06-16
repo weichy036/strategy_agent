@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import asdict, dataclass
 from datetime import date, datetime
+import math
 from pathlib import Path
 from typing import Literal
 
@@ -55,7 +56,13 @@ def collect_data_status(
     raw = raw_root or settings.raw_root
     derived = derived_root or settings.derived_root
     datasets = [
-        _instrument_partitioned("daily_qfq", derived / "daily_qfq", today, stale_after_days),
+        _instrument_partitioned(
+            "daily_qfq",
+            derived / "daily_qfq",
+            today,
+            stale_after_days,
+            complete_coverage=True,
+        ),
         _date_partitioned("daily_basic", raw / "daily_basic", today, stale_after_days),
         _date_partitioned("selection_daily", derived / "selection_daily", today, stale_after_days),
         _instrument_partitioned("fund_daily", raw / "fund_daily", today, stale_after_days),
@@ -104,9 +111,16 @@ def _period_partitioned(name: str, path: Path, as_of: date, stale_after_days: in
     )
 
 
-def _instrument_partitioned(name: str, path: Path, as_of: date, stale_after_days: int) -> DatasetStatus:
+def _instrument_partitioned(
+    name: str,
+    path: Path,
+    as_of: date,
+    stale_after_days: int,
+    *,
+    complete_coverage: bool = False,
+) -> DatasetStatus:
     files = sorted(path.glob("*.parquet")) if path.exists() else []
-    latest = _latest_trade_date(files)
+    latest = _latest_complete_trade_date(files) if complete_coverage else _latest_trade_date(files)
     return _status(
         name=name,
         path=path,
@@ -115,6 +129,7 @@ def _instrument_partitioned(name: str, path: Path, as_of: date, stale_after_days
         latest_date=latest,
         as_of=as_of,
         stale_after_days=stale_after_days,
+        note="latest_date uses >=80% instrument coverage." if complete_coverage else None,
     )
 
 
@@ -157,6 +172,25 @@ def _latest_trade_date(files: list[Path]) -> str | None:
         if _is_yyyymmdd(value) and (latest is None or value > latest):
             latest = value
     return latest
+
+
+def _latest_complete_trade_date(files: list[Path], *, min_coverage_ratio: float = 0.8) -> str | None:
+    counts: dict[str, int] = {}
+    for path in files:
+        try:
+            frame = pd.read_parquet(path, columns=["trade_date"])
+        except Exception:  # noqa: BLE001
+            continue
+        if frame.empty:
+            continue
+        for value in frame["trade_date"].astype(str).str[:8].unique().tolist():
+            if _is_yyyymmdd(value):
+                counts[value] = counts.get(value, 0) + 1
+    if not counts:
+        return None
+    threshold = max(1, math.ceil(max(counts.values()) * min_coverage_ratio))
+    complete_dates = [value for value, count in counts.items() if count >= threshold]
+    return max(complete_dates) if complete_dates else None
 
 
 def _latest_yyyymmdd_stem(files: list[Path]) -> str | None:

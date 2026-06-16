@@ -155,10 +155,10 @@ def _inspect_selection_daily(item: RequiredDataset) -> LocalCoverage:
     return LocalCoverage(
         dataset="selection_daily",
         symbol=None,
-        exists=not missing,
+        exists=True,
         start_date=date,
         end_date=date,
-        row_count=1 if not missing else 0,
+        row_count=1,
         missing_fields=missing,
     )
 

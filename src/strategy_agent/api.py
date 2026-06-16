@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import unquote
 
-from fastapi import FastAPI, Query
+from fastapi import Depends, FastAPI, Query
 from fastapi.responses import FileResponse, PlainTextResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from google.adk.models.registry import LLMRegistry
@@ -18,6 +18,7 @@ from strategy_agent.services.adk_event_adapter import adapt_adk_event, extract_t
 from strategy_agent.services.agent_runtime import get_agent_runtime
 from strategy_agent.services.response_slimmer import slim_turn_result
 from strategy_agent.services.result_collector import StrategyRunResultCollector
+from strategy_agent.services.session_transcript import delete_transcript, load_transcript_turns
 
 
 def _mask_secret(value: str | None) -> str | None:
@@ -82,6 +83,22 @@ def _probe_deepseek_model() -> dict[str, Any]:
             "reachable": False,
             "error": str(exc),
         }
+
+
+def _maintenance_runtime_options(
+    max_codes: int = Query(default=20, ge=1, le=500),
+    sleep_seconds: float = Query(default=0.31, ge=0, le=10),
+    retry_max_attempts: int = Query(default=2, ge=1, le=5),
+    retry_delay_seconds: float = Query(default=2.0, ge=0, le=60),
+    stop_after_failures: int = Query(default=5, ge=1, le=100),
+) -> dict[str, Any]:
+    return {
+        "max_codes": max_codes,
+        "sleep_seconds": sleep_seconds,
+        "retry_max_attempts": retry_max_attempts,
+        "retry_delay_seconds": retry_delay_seconds,
+        "stop_after_failures": stop_after_failures,
+    }
 
 
 class ResearchRunRequest(BaseModel):
@@ -265,6 +282,52 @@ def create_api_app() -> FastAPI:
     def data_maintenance_refresh_meta() -> dict[str, Any]:
         return run_data_maintenance(mode="refresh_meta").to_dict()
 
+    @app.post("/data/maintenance/update-stock-daily")
+    def data_maintenance_update_stock_daily(
+        options: dict[str, Any] = Depends(_maintenance_runtime_options),
+    ) -> dict[str, Any]:
+        return run_data_maintenance(mode="update_stock_daily", **options).to_dict()
+
+    @app.post("/data/maintenance/update-adj-factor")
+    def data_maintenance_update_adj_factor(
+        options: dict[str, Any] = Depends(_maintenance_runtime_options),
+    ) -> dict[str, Any]:
+        return run_data_maintenance(mode="update_adj_factor", **options).to_dict()
+
+    @app.post("/data/maintenance/update-daily-basic")
+    def data_maintenance_update_daily_basic(
+        options: dict[str, Any] = Depends(_maintenance_runtime_options),
+    ) -> dict[str, Any]:
+        return run_data_maintenance(mode="update_daily_basic", **options).to_dict()
+
+    @app.post("/data/maintenance/update-fund-daily")
+    def data_maintenance_update_fund_daily(
+        options: dict[str, Any] = Depends(_maintenance_runtime_options),
+    ) -> dict[str, Any]:
+        return run_data_maintenance(mode="update_fund_daily", **options).to_dict()
+
+    @app.post("/data/maintenance/update-index-daily")
+    def data_maintenance_update_index_daily(
+        options: dict[str, Any] = Depends(_maintenance_runtime_options),
+    ) -> dict[str, Any]:
+        return run_data_maintenance(mode="update_index_daily", **options).to_dict()
+
+    @app.post("/data/maintenance/build-daily-qfq")
+    def data_maintenance_build_daily_qfq(
+        options: dict[str, Any] = Depends(_maintenance_runtime_options),
+    ) -> dict[str, Any]:
+        return run_data_maintenance(mode="build_daily_qfq", **options).to_dict()
+
+    @app.post("/data/maintenance/build-selection")
+    def data_maintenance_build_selection() -> dict[str, Any]:
+        return run_data_maintenance(mode="build_selection").to_dict()
+
+    @app.post("/data/maintenance/run-batch")
+    def data_maintenance_run_batch(
+        options: dict[str, Any] = Depends(_maintenance_runtime_options),
+    ) -> dict[str, Any]:
+        return run_data_maintenance(mode="run_batch", **options).to_dict()
+
     @app.get("/research/examples")
     def research_examples() -> dict[str, list[str]]:
         return {
@@ -288,6 +351,14 @@ def create_api_app() -> FastAPI:
         )
         if session is None:
             return SessionHistoryResponse(session_id=session_id, user_id=user_id, turns=[], state={})
+        stored_turns = load_transcript_turns(session_id=session_id, user_id=user_id)
+        if stored_turns:
+            return SessionHistoryResponse(
+                session_id=session.id,
+                user_id=session.user_id,
+                turns=[SessionTurn(**turn) for turn in stored_turns],
+                state=session.state,
+            )
         return SessionHistoryResponse(
             session_id=session.id,
             user_id=session.user_id,
@@ -306,6 +377,7 @@ def create_api_app() -> FastAPI:
             user_id=user_id,
             session_id=session_id,
         )
+        delete_transcript(session_id=session_id)
         return {"ok": True, "session_id": session_id}
 
     @app.post("/research/run", response_model=ResearchRunResponse)
