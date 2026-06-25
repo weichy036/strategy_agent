@@ -16,6 +16,7 @@ def create_intent_classifier_agent() -> Agent:
         model=create_llm_model(),
         description="识别用户的量化研究意图，并判断执行回测所需信息是否完整。",
         instruction=_instruction,
+        include_contents="none",
         output_key="intent_classification",
         **output_schema_kwargs(IntentClassificationOutput),
     )

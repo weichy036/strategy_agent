@@ -16,6 +16,7 @@ def create_clarification_agent() -> Agent:
         model=create_llm_model(),
         description="用简洁的多轮澄清补齐策略定义中真正缺失的信息。",
         instruction=_instruction,
+        include_contents="none",
         output_key="clarification_result",
         **output_schema_kwargs(ClarificationOutput),
     )

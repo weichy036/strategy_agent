@@ -16,6 +16,7 @@ def create_result_explanation_agent() -> Agent:
         model=create_llm_model(),
         description="用用户容易理解的语言解释当前 Agent 结果。",
         instruction=_instruction,
+        include_contents="none",
         output_key="result_explanation",
         **output_schema_kwargs(ResultExplanationOutput),
     )

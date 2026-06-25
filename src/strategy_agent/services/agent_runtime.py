@@ -10,6 +10,8 @@ import time
 from typing import Any
 
 from google.genai import types
+from google.adk.events import Event
+from google.adk.events.event_actions import EventActions
 
 from strategy_agent.app import build_runner
 from strategy_agent.config import settings
@@ -20,6 +22,8 @@ from strategy_agent.services.response_slimmer import slim_turn_result
 from strategy_agent.services.result_collector import StrategyRunResultCollector, timeline_entry
 from strategy_agent.services.runtime_models import AdkStreamEvent, AgentTurnResult
 from strategy_agent.services.session_transcript import append_transcript_turn
+from strategy_agent.services.state_keys import AgentStateKeys
+from strategy_agent.services.visible_context import build_visible_context
 
 
 def _to_user_content(message: str) -> types.Content:
@@ -131,6 +135,7 @@ class AgentResearchRuntime:
                     "No agent events received. Please check model connectivity and provider configuration."
                 )
             result = slim_turn_result(collector.build())
+            await self._persist_visible_context(user_id=user_id, session_id=session_id, message=message, result=result)
             append_transcript_turn(user_id=user_id, session_id=session_id, query=message, result=result)
             queue.put_nowait({"type": "final", "result": asdict(result)})
         except Exception as exc:  # noqa: BLE001
@@ -166,8 +171,32 @@ class AgentResearchRuntime:
                     queue=None,
                 )
         result = slim_turn_result(collector.build())
+        asyncio.run(self._persist_visible_context(user_id=user_id, session_id=session_id, message=message, result=result))
         append_transcript_turn(user_id=user_id, session_id=session_id, query=message, result=result)
         return result
+
+    async def _persist_visible_context(
+        self,
+        *,
+        user_id: str,
+        session_id: str,
+        message: str,
+        result: AgentTurnResult,
+    ) -> None:
+        session = await self.runner.session_service.get_session(
+            app_name=self.runner.app_name,
+            user_id=user_id,
+            session_id=session_id,
+        )
+        if session is None:
+            return
+        visible_context = build_visible_context(query=message, result=result)
+        event = Event(
+            invocation_id=f"visible-context:{session_id}",
+            author="ContextCompactor",
+            actions=EventActions(state_delta={AgentStateKeys.VISIBLE_CONTEXT: visible_context}),
+        )
+        await self.runner.session_service.append_event(session=session, event=event)
 
 
 _runtime: AgentResearchRuntime | None = None

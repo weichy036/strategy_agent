@@ -17,6 +17,7 @@ def create_strategy_designer_agent() -> Agent:
         model=create_llm_model(),
         description="把已澄清的用户意图转换为可执行的 Strategy Schema JSON。",
         instruction=_instruction,
+        include_contents="none",
         output_key="strategy_schema_draft",
         tools=[create_quant_backtest_skill_toolset()],
         **output_schema_kwargs(StrategySchema),

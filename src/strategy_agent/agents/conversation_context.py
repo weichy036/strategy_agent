@@ -17,6 +17,7 @@ def create_conversation_context_agent() -> Agent:
         model=create_llm_model(),
         description="判断当前用户输入是新策略、上一轮策略修改、结果追问还是普通问答，并产出可继承的任务上下文。",
         instruction=_instruction,
+        include_contents="none",
         output_key="conversation.context",
         **output_schema_kwargs(ConversationContextOutput),
     )

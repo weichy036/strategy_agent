@@ -11,6 +11,7 @@ from strategy_agent.services.state_keys import AgentStateKeys
 
 def conversation_context_instruction(ctx: ReadonlyContext) -> str:
     state = ctx.state
+    visible_context = _state_dict(state, AgentStateKeys.VISIBLE_CONTEXT, "")
     context = _state_dict(state, AgentStateKeys.CONVERSATION_CONTEXT, "ConversationContextAgent")
     schema = _state_dict(state, AgentStateKeys.STRATEGY_SCHEMA, "StrategyDesignerAgent")
     result_page = _state_dict(state, AgentStateKeys.RESULT_PAGE, "")
@@ -19,6 +20,10 @@ def conversation_context_instruction(ctx: ReadonlyContext) -> str:
         "【当前对话上下文】",
         "如果用户本轮是在追问、比较、微调或继续上轮策略，请优先继承这里的历史策略上下文；不要只根据本轮短句重新判断缺字段。",
     ]
+    if visible_context:
+        blocks.append("压缩后的可继承上下文：")
+        blocks.append(_json(visible_context))
+        return "\n".join(blocks)
     if context:
         blocks.append("本轮上下文解析：")
         blocks.append(_json(context))

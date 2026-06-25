@@ -13,6 +13,7 @@ from google.genai import types
 from strategy_agent.services.agent_state import read_structured_state
 from strategy_agent.services.data_availability import inspect_strategy_data
 from strategy_agent.services.state_keys import AgentStateKeys
+from strategy_agent.services.strategy_revision import apply_conversation_revision
 
 
 class DataResearchAgent(BaseAgent):
@@ -24,6 +25,7 @@ class DataResearchAgent(BaseAgent):
             executable_schema = None
         else:
             schema = _state_dict(ctx, AgentStateKeys.STRATEGY_SCHEMA_DRAFT)
+            schema = apply_conversation_revision(schema, _state_dict(ctx, AgentStateKeys.CONVERSATION_CONTEXT))
             report = inspect_strategy_data(schema) if schema else _not_required_report("未产出可执行策略结构，跳过数据检查。")
             executable_schema = apply_schema_patch(schema, report.schema_patch) if schema else None
 
@@ -91,6 +93,7 @@ def _set_path(target: dict[str, Any], parts: list[str], value: Any) -> None:
 
 def _state_dict(ctx: InvocationContext, key: str) -> dict[str, Any] | None:
     agent_name_by_key = {
+        AgentStateKeys.CONVERSATION_CONTEXT: "ConversationContextAgent",
         AgentStateKeys.INTENT_CLASSIFICATION: "IntentClassifierAgent",
         AgentStateKeys.CLARIFICATION_RESULT: "ClarificationAgent",
         AgentStateKeys.STRATEGY_SCHEMA_DRAFT: "StrategyDesignerAgent",
